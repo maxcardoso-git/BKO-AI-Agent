@@ -59,12 +59,12 @@ Plans:
   3. Policy Validator blocks step advancement when Manual Anatel rules are not satisfied
   4. Operator can start ticket processing and advance step-by-step through a configured capability flow
   5. Each step execution is logged in full (input, output, status, errors); failed steps can be retried individually
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: Regulatory orchestration service (SLA calculator, tipology classifier, situation resolver, action decider, capability selector, policy validator)
-- [ ] 03-02: MCP Server — capability registry, step engine, skill router, execution context manager
-- [ ] 03-03: MCP Server — artifact store, retry manager, execution logger; BFF execution endpoints (start, advance-step, finalize)
+- [ ] 03-01-PLAN.md — RegulatoryOrchestrationService: SLA calculator, capability selector, policy validator
+- [ ] 03-02-PLAN.md — TicketExecutionService: step engine (start, advance, finalize, retry), skill stub router
+- [ ] 03-03-PLAN.md — TicketExecutionController: BFF endpoints + end-to-end verification
 
 ### Phase 4: Intelligence Layer
 **Goal**: The AI service can build context-rich prompts, call configured LLM models, parse complaints, generate drafts, evaluate compliance, and retrieve relevant knowledge from the indexed knowledge base
