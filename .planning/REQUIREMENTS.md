@@ -222,15 +222,15 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DB-01 | Phase 1 | Pending |
-| DB-02 | Phase 1 | Pending |
-| DB-03 | Phase 1 | Pending |
-| DB-04 | Phase 1 | Pending |
-| DB-05 | Phase 1 | Pending |
-| DB-06 | Phase 1 | Pending |
-| DB-07 | Phase 1 | Pending |
-| DB-08 | Phase 1 | Pending |
-| DB-09 | Phase 1 | Pending |
+| DB-01 | Phase 1 | Complete |
+| DB-02 | Phase 1 | Complete |
+| DB-03 | Phase 1 | Complete |
+| DB-04 | Phase 1 | Complete |
+| DB-05 | Phase 1 | Complete |
+| DB-06 | Phase 1 | Complete |
+| DB-07 | Phase 1 | Complete |
+| DB-08 | Phase 1 | Complete |
+| DB-09 | Phase 1 | Complete |
 | AUTH-01 | Phase 2 | Pending |
 | AUTH-02 | Phase 2 | Pending |
 | AUTH-03 | Phase 2 | Pending |
