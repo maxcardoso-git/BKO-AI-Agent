@@ -222,13 +222,146 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (populated during roadmap creation) | | |
+| DB-01 | Phase 1 | Pending |
+| DB-02 | Phase 1 | Pending |
+| DB-03 | Phase 1 | Pending |
+| DB-04 | Phase 1 | Pending |
+| DB-05 | Phase 1 | Pending |
+| DB-06 | Phase 1 | Pending |
+| DB-07 | Phase 1 | Pending |
+| DB-08 | Phase 1 | Pending |
+| DB-09 | Phase 1 | Pending |
+| AUTH-01 | Phase 2 | Pending |
+| AUTH-02 | Phase 2 | Pending |
+| AUTH-03 | Phase 2 | Pending |
+| AUTH-04 | Phase 2 | Pending |
+| TICK-01 | Phase 2 | Pending |
+| TICK-02 | Phase 2 | Pending |
+| TICK-03 | Phase 2 | Pending |
+| TICK-04 | Phase 2 | Pending |
+| TICK-05 | Phase 2 | Pending |
+| TICK-06 | Phase 2 | Pending |
+| ORCH-01 | Phase 3 | Pending |
+| ORCH-02 | Phase 3 | Pending |
+| ORCH-03 | Phase 3 | Pending |
+| ORCH-04 | Phase 3 | Pending |
+| ORCH-05 | Phase 3 | Pending |
+| ORCH-06 | Phase 3 | Pending |
+| ORCH-07 | Phase 3 | Pending |
+| ORCH-08 | Phase 3 | Pending |
+| MCP-01 | Phase 3 | Pending |
+| MCP-02 | Phase 3 | Pending |
+| MCP-03 | Phase 3 | Pending |
+| MCP-04 | Phase 3 | Pending |
+| MCP-05 | Phase 3 | Pending |
+| MCP-06 | Phase 3 | Pending |
+| MCP-07 | Phase 3 | Pending |
+| MCP-08 | Phase 3 | Pending |
+| AI-01 | Phase 4 | Pending |
+| AI-02 | Phase 4 | Pending |
+| AI-03 | Phase 4 | Pending |
+| AI-04 | Phase 4 | Pending |
+| AI-05 | Phase 4 | Pending |
+| AI-06 | Phase 4 | Pending |
+| AI-07 | Phase 4 | Pending |
+| AI-08 | Phase 4 | Pending |
+| AI-09 | Phase 4 | Pending |
+| AI-10 | Phase 4 | Pending |
+| KB-01 | Phase 4 | Pending |
+| KB-02 | Phase 4 | Pending |
+| KB-03 | Phase 4 | Pending |
+| KB-04 | Phase 4 | Pending |
+| KB-05 | Phase 4 | Pending |
+| KB-06 | Phase 4 | Pending |
+| KB-07 | Phase 4 | Pending |
+| KB-08 | Phase 4 | Pending |
+| SKLL-01 | Phase 5 | Pending |
+| SKLL-02 | Phase 5 | Pending |
+| SKLL-03 | Phase 5 | Pending |
+| SKLL-04 | Phase 5 | Pending |
+| SKLL-05 | Phase 5 | Pending |
+| SKLL-06 | Phase 5 | Pending |
+| SKLL-07 | Phase 5 | Pending |
+| SKLL-08 | Phase 5 | Pending |
+| SKLL-09 | Phase 5 | Pending |
+| SKLL-10 | Phase 5 | Pending |
+| SKLL-11 | Phase 5 | Pending |
+| SKLL-12 | Phase 5 | Pending |
+| SKLL-13 | Phase 5 | Pending |
+| SKLL-14 | Phase 5 | Pending |
+| SKLL-15 | Phase 5 | Pending |
+| SKLL-16 | Phase 5 | Pending |
+| SKLL-17 | Phase 5 | Pending |
+| SKLL-18 | Phase 5 | Pending |
+| SKLL-19 | Phase 5 | Pending |
+| SKLL-20 | Phase 5 | Pending |
+| ART-01 | Phase 5 | Pending |
+| ART-02 | Phase 5 | Pending |
+| ART-03 | Phase 5 | Pending |
+| ART-04 | Phase 5 | Pending |
+| ART-05 | Phase 5 | Pending |
+| ART-06 | Phase 5 | Pending |
+| ART-07 | Phase 5 | Pending |
+| ART-08 | Phase 5 | Pending |
+| ART-09 | Phase 5 | Pending |
+| ART-10 | Phase 5 | Pending |
+| ART-11 | Phase 5 | Pending |
+| STEP-01 | Phase 6 | Pending |
+| STEP-02 | Phase 6 | Pending |
+| STEP-03 | Phase 6 | Pending |
+| STEP-04 | Phase 6 | Pending |
+| HITL-01 | Phase 6 | Pending |
+| HITL-02 | Phase 6 | Pending |
+| HITL-03 | Phase 6 | Pending |
+| HITL-04 | Phase 6 | Pending |
+| HITL-05 | Phase 6 | Pending |
+| HITL-06 | Phase 6 | Pending |
+| HITL-07 | Phase 6 | Pending |
+| DSGN-01 | Phase 6 | Pending |
+| DSGN-02 | Phase 6 | Pending |
+| DSGN-03 | Phase 6 | Pending |
+| DSGN-04 | Phase 6 | Pending |
+| DSGN-05 | Phase 6 | Pending |
+| DSGN-06 | Phase 6 | Pending |
+| DSGN-07 | Phase 6 | Pending |
+| DSGN-08 | Phase 6 | Pending |
+| DSGN-09 | Phase 6 | Pending |
+| MEM-01 | Phase 7 | Pending |
+| MEM-02 | Phase 7 | Pending |
+| MEM-03 | Phase 7 | Pending |
+| MEM-04 | Phase 7 | Pending |
+| MEM-05 | Phase 7 | Pending |
+| MEM-06 | Phase 7 | Pending |
+| PERS-01 | Phase 7 | Pending |
+| PERS-02 | Phase 7 | Pending |
+| PERS-03 | Phase 7 | Pending |
+| CONF-01 | Phase 7 | Pending |
+| CONF-02 | Phase 7 | Pending |
+| CONF-03 | Phase 7 | Pending |
+| CONF-04 | Phase 7 | Pending |
+| CONF-05 | Phase 7 | Pending |
+| CONF-06 | Phase 7 | Pending |
+| CONF-07 | Phase 7 | Pending |
+| OBS-01 | Phase 7 | Pending |
+| OBS-02 | Phase 7 | Pending |
+| OBS-03 | Phase 7 | Pending |
+| OBS-04 | Phase 7 | Pending |
+| OBS-05 | Phase 7 | Pending |
+| OBS-06 | Phase 7 | Pending |
+| OBS-07 | Phase 7 | Pending |
+| OBS-08 | Phase 7 | Pending |
+| OBS-09 | Phase 7 | Pending |
+| SEC-01 | Phase 7 | Pending |
+| SEC-02 | Phase 7 | Pending |
+| SEC-03 | Phase 7 | Pending |
+| SEC-04 | Phase 7 | Pending |
+| SEC-05 | Phase 7 | Pending |
 
 **Coverage:**
 - v1 requirements: 111 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 111
+- Mapped to phases: 111
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-17*
-*Last updated: 2026-03-17 after initial definition*
+*Last updated: 2026-03-17 after roadmap creation*
