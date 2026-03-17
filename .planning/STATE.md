@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Cada reclamacao tratada com conformidade regulatoria, artefatos rastreaveis, HITL obrigatorio, sem perder prazo
-**Current focus:** Phase 2 — Backend API
+**Current focus:** Phase 3 — Processing Pipeline
 
 ## Current Position
 
-Phase: 2 of 7 (Access Layer) — In progress
-Plan: 2 of 3 in phase 02 (2 complete)
-Status: In progress — 02-01 and 02-02 complete, 02-03 pending
-Last activity: 2026-03-17 — Completed 02-02-PLAN.md (Complaint BFF endpoints — paginated list with filters, detail, executions, artifacts, logs)
+Phase: 2 of 7 (Access Layer) — COMPLETE
+Plan: 3 of 3 in phase 02 (all complete)
+Status: Phase 2 complete — 02-01, 02-02, 02-03 done
+Last activity: 2026-03-17 — Completed 02-03-PLAN.md (Next.js frontend: login, session, complaint queue, ticket detail)
 
-Progress: [█████░░░░░] 24% (5/21 plans)
+Progress: [██████░░░░] 29% (6/21 plans)
 
 ## Performance Metrics
 
@@ -28,11 +28,11 @@ Progress: [█████░░░░░] 24% (5/21 plans)
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 DONE | 29 min | 9.7 min |
-| 02-access-layer | 1/3 | 14 min | 14 min |
+| 02-access-layer | 3/3 DONE | ~59 min | ~20 min |
 
 **Recent Trend:**
-- Last 5 plans: 11 min, 10 min, 8 min, 14 min
-- Trend: consistent ~9-14 min per plan
+- Last 5 plans: 11 min, 10 min, 8 min, 14 min, 45 min
+- Trend: UI plans take longer (~45 min) than backend/infra plans (~10-14 min)
 
 *Updated after each plan completion*
 
@@ -67,6 +67,12 @@ Recent decisions affecting current work:
 - 02-02: isOverdue query param accepted as string 'true'/'false', parsed to boolean in service (HTTP query params are always strings)
 - 02-02: sortBy guarded with allowedSortFields whitelist before interpolation into QueryBuilder.orderBy() — SQL injection prevention
 - 02-02: Artifact.complaintId direct FK — artifact queries by complaint don't need join chain through stepExecution
+- 02-03: jose used for session encryption (HS256) — works on both Edge (middleware) and Node.js (server components)
+- 02-03: Session cookie stores encrypted backend JWT — browser never sees raw access_token
+- 02-03: cookies() is async in Next.js 15+ — all session/DAL code must use await cookies()
+- 02-03: redirect() throws NEXT_REDIRECT internally — must be called outside try/catch in server actions
+- 02-03: useActionState from 'react' (React 19), not from 'react-dom' — useFormState is deprecated
+- 02-03: Filter state in URL searchParams, not useState — server-rendered, shareable, no hydration mismatches
 
 ### Pending Todos
 
@@ -79,9 +85,10 @@ None.
 - **Phase 1 complete:** All 3 foundation plans done. Database has 32 tables, seed data, 20 mock complaints. Ready for Phase 2 backend API work.
 - **Auth operational (02-01 done):** JWT guard global, RBAC via @Roles, 3 test users seeded (operator/supervisor/admin). All subsequent endpoints auto-protected.
 - **Complaint API operational (02-02 done):** GET /api/complaints (paginated, 7 filters), GET /api/complaints/:id (full relations), /executions, /artifacts, /logs sub-resources all live. Frontend can integrate immediately.
+- **Phase 2 complete (02-03 done):** Next.js frontend with login, session management (jose HS256 cookie), complaint queue with URL-driven filters, ticket detail with all sections. AUTH-01..03 and TICK-01,02,04,05,06 satisfied. Ready for Phase 3 processing pipeline.
 
 ## Session Continuity
 
-Last session: 2026-03-17T21:53:24Z
-Stopped at: Completed 02-02-PLAN.md — Complaint BFF endpoints, execution sub-resources, global ValidationPipe
+Last session: 2026-03-17
+Stopped at: Completed 02-03-PLAN.md — Next.js frontend: login page, session management, complaint queue, ticket detail
 Resume file: None
