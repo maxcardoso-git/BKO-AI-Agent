@@ -8,6 +8,7 @@ import { RegulatoryAction } from './entities/regulatory-action.entity';
 import { Persona } from './entities/persona.entity';
 import { ResponseTemplate } from './entities/response-template.entity';
 import { MandatoryInfoRule } from './entities/mandatory-info-rule.entity';
+import { TipologyController } from './controllers/tipology.controller';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { MandatoryInfoRule } from './entities/mandatory-info-rule.entity';
       MandatoryInfoRule,
     ]),
   ],
+  controllers: [TipologyController],
   exports: [TypeOrmModule],
 })
 export class RegulatorioModule {}
