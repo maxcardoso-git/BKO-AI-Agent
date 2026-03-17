@@ -1,12 +1,27 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Tipology } from './entities/tipology.entity';
+import { Subtipology } from './entities/subtipology.entity';
+import { Situation } from './entities/situation.entity';
+import { RegulatoryRule } from './entities/regulatory-rule.entity';
+import { RegulatoryAction } from './entities/regulatory-action.entity';
+import { Persona } from './entities/persona.entity';
+import { ResponseTemplate } from './entities/response-template.entity';
+import { MandatoryInfoRule } from './entities/mandatory-info-rule.entity';
 
-/**
- * Regulatorio module — tipology, subtipology, situation, regulatory_rule, regulatory_action,
- * persona, response_template, mandatory_info_rule
- * Entities and services will be added in Plan 02 (domain schema).
- */
 @Module({
-  imports: [],
-  exports: [],
+  imports: [
+    TypeOrmModule.forFeature([
+      Tipology,
+      Subtipology,
+      Situation,
+      RegulatoryRule,
+      RegulatoryAction,
+      Persona,
+      ResponseTemplate,
+      MandatoryInfoRule,
+    ]),
+  ],
+  exports: [TypeOrmModule],
 })
 export class RegulatorioModule {}

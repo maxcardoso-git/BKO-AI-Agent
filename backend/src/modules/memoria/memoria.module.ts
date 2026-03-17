@@ -1,12 +1,23 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { KbDocument } from './entities/kb-document.entity';
+import { KbDocumentVersion } from './entities/kb-document-version.entity';
+import { KbChunk } from './entities/kb-chunk.entity';
+import { CaseMemory } from './entities/case-memory.entity';
+import { HumanFeedbackMemory } from './entities/human-feedback-memory.entity';
+import { StyleMemory } from './entities/style-memory.entity';
 
-/**
- * Memoria module — kb_document, kb_document_version, kb_chunk (pgvector),
- * case_memory (pgvector), human_feedback_memory, style_memory
- * Entities and services will be added in Plan 02 (domain schema).
- */
 @Module({
-  imports: [],
-  exports: [],
+  imports: [
+    TypeOrmModule.forFeature([
+      KbDocument,
+      KbDocumentVersion,
+      KbChunk,
+      CaseMemory,
+      HumanFeedbackMemory,
+      StyleMemory,
+    ]),
+  ],
+  exports: [TypeOrmModule],
 })
 export class MemoriaModule {}

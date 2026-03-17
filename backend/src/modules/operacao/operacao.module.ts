@@ -1,11 +1,19 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { Complaint } from './entities/complaint.entity';
+import { ComplaintDetail } from './entities/complaint-detail.entity';
+import { ComplaintHistory } from './entities/complaint-history.entity';
+import { ComplaintAttachment } from './entities/complaint-attachment.entity';
 
-/**
- * Operacao module — complaint, complaint_detail, complaint_history, complaint_attachment
- * Entities and services will be added in Plan 02 (domain schema).
- */
 @Module({
-  imports: [],
-  exports: [],
+  imports: [
+    TypeOrmModule.forFeature([
+      Complaint,
+      ComplaintDetail,
+      ComplaintHistory,
+      ComplaintAttachment,
+    ]),
+  ],
+  exports: [TypeOrmModule],
 })
 export class OperacaoModule {}
