@@ -25,12 +25,12 @@ BKO Agent is built in seven phases following the natural dependency order of the
   2. Seed data is loaded: tipologias, situacoes, and regulatory rules are queryable via SQL
   3. Mock complaint data from the spreadsheet is injected and queryable
   4. NestJS backend and Next.js frontend boot without errors and can reach the database
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Database schema — all 5 domains, pgvector extension, migrations
-- [ ] 01-02: Seed & mock data injection
-- [ ] 01-03: NestJS + Next.js project scaffolding, Docker Compose, CI health check
+- [ ] 01-01-PLAN.md — NestJS + Next.js scaffolding, Docker Compose, TypeORM + pgvector config
+- [ ] 01-02-PLAN.md — All 31 entity definitions across 5 domains, domain-scoped migrations
+- [ ] 01-03-PLAN.md — Seed data (tipologias, situations, rules, skills) + mock complaint injection
 
 ### Phase 2: Access Layer
 **Goal**: Authenticated users with appropriate roles can access the system and view, filter, and inspect complaint tickets
@@ -137,11 +137,11 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 0/3 | Not started | - |
+| 1. Foundation | 0/3 | Planned | - |
 | 2. Access Layer | 0/3 | Not started | - |
 | 3. Orchestration Engine | 0/3 | Not started | - |
 | 4. Intelligence Layer | 0/3 | Not started | - |
