@@ -15,12 +15,16 @@ interface TicketFiltersProps {
   currentStatus?: string
   currentRiskLevel?: string
   currentIsOverdue?: string
+  tipologies: { id: string; label: string }[]
+  currentTipologyId?: string
 }
 
 export function TicketFilters({
   currentStatus,
   currentRiskLevel,
   currentIsOverdue,
+  tipologies,
+  currentTipologyId,
 }: TicketFiltersProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -54,6 +58,26 @@ export function TicketFilters({
             <SelectItem value="waiting_human">Aguardando humano</SelectItem>
             <SelectItem value="completed">Concluída</SelectItem>
             <SelectItem value="cancelled">Cancelada</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Tipologia:</span>
+        <Select
+          value={currentTipologyId ?? ALL_VALUE}
+          onValueChange={(v) => updateFilter('tipologyId', v)}
+        >
+          <SelectTrigger className="w-52">
+            <SelectValue placeholder="Todas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_VALUE}>Todas</SelectItem>
+            {tipologies.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

@@ -8,6 +8,7 @@ interface SearchParams {
   status?: string
   riskLevel?: string
   isOverdue?: string
+  tipologyId?: string
   page?: string
 }
 
@@ -23,11 +24,22 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   if (params.status) query.set('status', params.status)
   if (params.riskLevel) query.set('riskLevel', params.riskLevel)
   if (params.isOverdue) query.set('isOverdue', params.isOverdue)
+  if (params.tipologyId) query.set('tipologyId', params.tipologyId)
   if (params.page) query.set('page', params.page)
   query.set('limit', '20')
 
-  const res = await fetchAuthAPI(`/api/complaints?${query.toString()}`)
-  const result: ComplaintListResponse = res.ok ? await res.json() : { data: [], total: 0, page: 1, limit: 20, totalPages: 0 }
+  const [complaintsRes, tipologiesRes] = await Promise.all([
+    fetchAuthAPI(`/api/complaints?${query.toString()}`),
+    fetchAuthAPI('/api/tipologies'),
+  ])
+
+  const result: ComplaintListResponse = complaintsRes.ok
+    ? await complaintsRes.json()
+    : { data: [], total: 0, page: 1, limit: 20, totalPages: 0 }
+
+  const tipologies: { id: string; label: string }[] = tipologiesRes.ok
+    ? await tipologiesRes.json()
+    : []
 
   const currentPage = Number(params.page ?? 1)
 
@@ -46,6 +58,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         currentStatus={params.status}
         currentRiskLevel={params.riskLevel}
         currentIsOverdue={params.isOverdue}
+        tipologies={tipologies}
+        currentTipologyId={params.tipologyId}
       />
 
       <div className="mt-4">
