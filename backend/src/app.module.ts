@@ -5,6 +5,11 @@ import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PgvectorBootstrapService } from './database/pgvector-bootstrap.service';
+import { OperacaoModule } from './modules/operacao/operacao.module';
+import { RegulatorioModule } from './modules/regulatorio/regulatorio.module';
+import { OrquestracaoModule } from './modules/orquestracao/orquestracao.module';
+import { ExecucaoModule } from './modules/execucao/execucao.module';
+import { MemoriaModule } from './modules/memoria/memoria.module';
 
 @Module({
   imports: [
@@ -36,6 +41,11 @@ import { PgvectorBootstrapService } from './database/pgvector-bootstrap.service'
       }),
       inject: [ConfigService],
     }),
+    OperacaoModule,
+    RegulatorioModule,
+    OrquestracaoModule,
+    ExecucaoModule,
+    MemoriaModule,
   ],
   controllers: [AppController],
   providers: [AppService, PgvectorBootstrapService],
