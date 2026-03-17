@@ -1,8 +1,9 @@
 import { DataSource } from 'typeorm';
 import { Seeder, SeederFactoryManager } from 'typeorm-extension';
-import RegulatorioSeeder from './regulatorio.seeder';
-import OrquestracaoSeeder from './orquestracao.seeder';
 import ComplaintMockSeeder from './complaint-mock.seeder';
+import OrquestracaoSeeder from './orquestracao.seeder';
+import RegulatorioSeeder from './regulatorio.seeder';
+import UserSeeder from './user.seeder';
 
 export default class MainSeeder implements Seeder {
   async run(
@@ -11,6 +12,7 @@ export default class MainSeeder implements Seeder {
   ): Promise<void> {
     console.log('MainSeeder: starting all seeders...');
 
+    await new UserSeeder().run(dataSource, factoryManager);
     await new RegulatorioSeeder().run(dataSource, factoryManager);
     await new OrquestracaoSeeder().run(dataSource, factoryManager);
     await new ComplaintMockSeeder().run(dataSource, factoryManager);
