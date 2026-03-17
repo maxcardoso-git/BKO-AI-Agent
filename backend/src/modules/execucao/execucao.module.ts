@@ -7,6 +7,8 @@ import { LlmCall } from './entities/llm-call.entity';
 import { TokenUsage } from './entities/token-usage.entity';
 import { HumanReview } from './entities/human-review.entity';
 import { AuditLog } from './entities/audit-log.entity';
+import { ExecutionService } from './services/execution.service';
+import { ExecutionController } from './controllers/execution.controller';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { AuditLog } from './entities/audit-log.entity';
       AuditLog,
     ]),
   ],
+  controllers: [ExecutionController],
+  providers: [ExecutionService],
   exports: [TypeOrmModule],
 })
 export class ExecucaoModule {}
