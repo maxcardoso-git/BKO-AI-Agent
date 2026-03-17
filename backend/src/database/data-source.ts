@@ -12,7 +12,7 @@ export const dataSourceOptions: DataSourceOptions & SeederOptions = {
   database: process.env.DB_NAME,
   entities: ['dist/**/*.entity.js'],
   migrations: ['dist/database/migrations/*.js'],
-  seeds: ['dist/database/seeds/*.js'],
+  seeds: ['dist/database/seeds/main.seeder.js'],
   factories: ['dist/database/factories/*.js'],
   synchronize: false,
   logging: process.env.NODE_ENV === 'development',
