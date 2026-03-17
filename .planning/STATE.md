@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 3 of 7 (Orchestration Engine) — In progress
-Plan: 1 of N in phase 03 (03-01 complete)
-Status: Phase 3 started — 03-01 done
-Last activity: 2026-03-17 — Completed 03-01-PLAN.md (RegulatoryOrchestrationService + OrquestracaoModule wiring)
+Plan: 2 of N in phase 03 (03-02 complete)
+Status: Phase 3 in progress — 03-01, 03-02 done
+Last activity: 2026-03-17 — Completed 03-02-PLAN.md (TicketExecutionService + ExecucaoModule wiring)
 
-Progress: [███████░░░] 32% (8/22 plans)
+Progress: [███████░░░] 36% (9/22 plans)
 
 ## Performance Metrics
 
@@ -29,7 +29,7 @@ Progress: [███████░░░] 32% (8/22 plans)
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 DONE | 29 min | 9.7 min |
 | 02-access-layer | 4/4 DONE | ~61 min | ~15 min |
-| 03-orchestration-engine | 1/? IN PROGRESS | ~4 min | ~4 min |
+| 03-orchestration-engine | 2/? IN PROGRESS | ~13 min | ~6.5 min |
 
 **Recent Trend:**
 - Last 5 plans: 8 min, 14 min, 45 min, 2 min, 4 min
@@ -81,6 +81,10 @@ Recent decisions affecting current work:
 - 03-01: computeSla is synchronous — pure computation on already-loaded entities, no DB calls needed
 - 03-01: validatePolicyRules uses conservative strategy — unknown BLOCKING rule types add violations (fail-safe not fail-open)
 - 03-01: Phase 3 stub for requires_complete_checklist — always passes, deferred to Phase 4
+- 03-02: ExecutionContext interface requires [key: string]: unknown index signature for TypeORM DeepPartial<Record<string,unknown>> assignment
+- 03-02: advanceStep locates next step by array index not stepOrder arithmetic — robust to non-sequential stepOrder values
+- 03-02: retryStep updates existing StepExecution row (increment retryCount), does NOT create new row
+- 03-02: executeSkillStub is synchronous — all stubs are pure computation, no async needed
 
 ### Pending Todos
 
@@ -96,9 +100,10 @@ None.
 - **Phase 2 complete (02-03 done):** Next.js frontend with login, session management (jose HS256 cookie), complaint queue with URL-driven filters, ticket detail with all sections. AUTH-01..03 and TICK-01,02,04,05,06 satisfied. Ready for Phase 3 processing pipeline.
 - **Phase 2 gap closure complete (02-04 done):** Edge middleware registered, GET /api/tipologies endpoint live, tipologia filter end-to-end in /tickets. All 3 verified gaps closed.
 - **Phase 3 started (03-01 done):** RegulatoryOrchestrationService live with computeSla, selectCapabilityVersion, validatePolicyRules. OrquestracaoModule wired with RegulatorioModule. Ready for 03-02 step execution engine.
+- **03-02 done:** TicketExecutionService live with startExecution, advanceStep, finalizeExecution, retryStep, and 19 skill stubs. ExecucaoModule imports OrquestracaoModule + OperacaoModule. Ready for 03-03 HTTP controller.
 
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Completed 03-01-PLAN.md — RegulatoryOrchestrationService + OrquestracaoModule wiring
+Stopped at: Completed 03-02-PLAN.md — TicketExecutionService + ExecucaoModule wiring
 Resume file: None
