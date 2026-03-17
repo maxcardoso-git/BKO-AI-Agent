@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 2 of 7 (Access Layer) — In progress
-Plan: 1 of 3 in phase 02 (1 complete)
-Status: In progress — 02-01 complete, 02-02 and 02-03 pending
-Last activity: 2026-03-17 — Completed 02-01-PLAN.md (Auth Module — JWT + Passport + RBAC guards + 3 test users)
+Plan: 2 of 3 in phase 02 (2 complete)
+Status: In progress — 02-01 and 02-02 complete, 02-03 pending
+Last activity: 2026-03-17 — Completed 02-02-PLAN.md (Complaint BFF endpoints — paginated list with filters, detail, executions, artifacts, logs)
 
-Progress: [████░░░░░░] 19% (4/21 plans)
+Progress: [█████░░░░░] 24% (5/21 plans)
 
 ## Performance Metrics
 
@@ -63,6 +63,10 @@ Recent decisions affecting current work:
 - 02-01: APP_GUARD pattern for global guards — all endpoints auto-protected, @Public() to opt out
 - 02-01: JwtStrategy fetches full User from DB on each request — ensures live isActive check (not stale from token)
 - 02-01: UserSeeder runs first in MainSeeder sequence for FK readiness in future plans
+- 02-02: Global ValidationPipe with transform:true in main.ts — enables @Type(() => Number) coercion on query params
+- 02-02: isOverdue query param accepted as string 'true'/'false', parsed to boolean in service (HTTP query params are always strings)
+- 02-02: sortBy guarded with allowedSortFields whitelist before interpolation into QueryBuilder.orderBy() — SQL injection prevention
+- 02-02: Artifact.complaintId direct FK — artifact queries by complaint don't need join chain through stepExecution
 
 ### Pending Todos
 
@@ -74,9 +78,10 @@ None.
 - **Local postgres on 5432:** Docker postgres mapped to 5433. `.env.example` documents this. All future plans should use port 5433 for local dev.
 - **Phase 1 complete:** All 3 foundation plans done. Database has 32 tables, seed data, 20 mock complaints. Ready for Phase 2 backend API work.
 - **Auth operational (02-01 done):** JWT guard global, RBAC via @Roles, 3 test users seeded (operator/supervisor/admin). All subsequent endpoints auto-protected.
+- **Complaint API operational (02-02 done):** GET /api/complaints (paginated, 7 filters), GET /api/complaints/:id (full relations), /executions, /artifacts, /logs sub-resources all live. Frontend can integrate immediately.
 
 ## Session Continuity
 
-Last session: 2026-03-17T21:57:40Z
-Stopped at: Completed 02-01-PLAN.md — JWT auth, global guards, RBAC, 3 test users seeded
+Last session: 2026-03-17T21:53:24Z
+Stopped at: Completed 02-02-PLAN.md — Complaint BFF endpoints, execution sub-resources, global ValidationPipe
 Resume file: None
