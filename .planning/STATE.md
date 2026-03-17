@@ -9,29 +9,30 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 1 of 7 (Foundation) — COMPLETE
-Plan: 3 of 3 in phase 01 (all plans complete)
-Status: Phase 1 complete — ready for Phase 2
-Last activity: 2026-03-17 — Completed 01-03-PLAN.md (Seed Data — regulatory reference + 20 mock complaints)
+Phase: 2 of 7 (Access Layer) — In progress
+Plan: 1 of 3 in phase 02 (1 complete)
+Status: In progress — 02-01 complete, 02-02 and 02-03 pending
+Last activity: 2026-03-17 — Completed 02-01-PLAN.md (Auth Module — JWT + Passport + RBAC guards + 3 test users)
 
-Progress: [███░░░░░░░] 14% (3/21 plans)
+Progress: [████░░░░░░] 19% (4/21 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 9.7 min
-- Total execution time: 0.48 hours
+- Total plans completed: 4
+- Average duration: 10.3 min
+- Total execution time: 0.69 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 DONE | 29 min | 9.7 min |
+| 02-access-layer | 1/3 | 14 min | 14 min |
 
 **Recent Trend:**
-- Last 5 plans: 11 min, 10 min, 8 min
-- Trend: consistent ~9-11 min per plan
+- Last 5 plans: 11 min, 10 min, 8 min, 14 min
+- Trend: consistent ~9-14 min per plan
 
 *Updated after each plan completion*
 
@@ -59,6 +60,9 @@ Recent decisions affecting current work:
 - 01-03: TypeORM 0.3.x rejects repo.delete({}) with empty criteria — use dataSource.query('DELETE FROM table') for full truncation
 - 01-03: typeorm-extension Seeder.run() requires (dataSource, factoryManager) signature even if factoryManager unused
 - 01-03: Complaint mock seeder uses count-based idempotency (skip if >= 20) since protocol numbers are runtime-generated
+- 02-01: APP_GUARD pattern for global guards — all endpoints auto-protected, @Public() to opt out
+- 02-01: JwtStrategy fetches full User from DB on each request — ensures live isActive check (not stale from token)
+- 02-01: UserSeeder runs first in MainSeeder sequence for FK readiness in future plans
 
 ### Pending Todos
 
@@ -69,9 +73,10 @@ None.
 - **pgvector 0.2.x API change:** The `pgvector/typeorm` subpath no longer exists. Use `pgvector/pg` with pool hook. Pattern established in `PgvectorBootstrapService`.
 - **Local postgres on 5432:** Docker postgres mapped to 5433. `.env.example` documents this. All future plans should use port 5433 for local dev.
 - **Phase 1 complete:** All 3 foundation plans done. Database has 32 tables, seed data, 20 mock complaints. Ready for Phase 2 backend API work.
+- **Auth operational (02-01 done):** JWT guard global, RBAC via @Roles, 3 test users seeded (operator/supervisor/admin). All subsequent endpoints auto-protected.
 
 ## Session Continuity
 
-Last session: 2026-03-17T19:25:30Z
-Stopped at: Completed 01-03-PLAN.md — regulatory reference data, 19 skills, 20 mock complaints with details and history seeded
+Last session: 2026-03-17T21:57:40Z
+Stopped at: Completed 02-01-PLAN.md — JWT auth, global guards, RBAC, 3 test users seeded
 Resume file: None
