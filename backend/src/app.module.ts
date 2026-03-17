@@ -5,11 +5,12 @@ import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PgvectorBootstrapService } from './database/pgvector-bootstrap.service';
-import { OperacaoModule } from './modules/operacao/operacao.module';
-import { RegulatorioModule } from './modules/regulatorio/regulatorio.module';
-import { OrquestracaoModule } from './modules/orquestracao/orquestracao.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { ExecucaoModule } from './modules/execucao/execucao.module';
 import { MemoriaModule } from './modules/memoria/memoria.module';
+import { OperacaoModule } from './modules/operacao/operacao.module';
+import { OrquestracaoModule } from './modules/orquestracao/orquestracao.module';
+import { RegulatorioModule } from './modules/regulatorio/regulatorio.module';
 
 @Module({
   imports: [
@@ -23,6 +24,8 @@ import { MemoriaModule } from './modules/memoria/memoria.module';
         DB_NAME: Joi.string().required(),
         EMBEDDING_DIMENSIONS: Joi.number().default(1536),
         NODE_ENV: Joi.string().default('development'),
+        JWT_SECRET: Joi.string().required(),
+        JWT_EXPIRES_IN: Joi.string().default('8h'),
       }),
     }),
     TypeOrmModule.forRootAsync({
@@ -41,6 +44,7 @@ import { MemoriaModule } from './modules/memoria/memoria.module';
       }),
       inject: [ConfigService],
     }),
+    AuthModule,
     OperacaoModule,
     RegulatorioModule,
     OrquestracaoModule,
