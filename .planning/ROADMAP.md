@@ -42,12 +42,12 @@ Plans:
   3. Operator can see the complaint queue with filters (tipologia, SLA, status, risco, etapa)
   4. Operator can open a ticket and see request details, attachments, and full history
   5. Operator can see all artifacts and execution logs for a ticket
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Auth service (JWT, RBAC, session persistence) + BFF auth endpoints
-- [ ] 02-02: Ticket CRUD — BFF endpoints (list with filters/pagination, detail, logs, artifacts)
-- [ ] 02-03: Frontend — complaint queue page, ticket detail page, auth flow
+- [ ] 02-01-PLAN.md — Auth module (JWT + RBAC + guards), user migration, seed test users
+- [ ] 02-02-PLAN.md — Complaint CRUD endpoints (list with filters/pagination, detail, executions, artifacts)
+- [ ] 02-03-PLAN.md — Frontend login, complaint queue page, ticket detail page
 
 ### Phase 3: Orchestration Engine
 **Goal**: The system can classify a complaint, compute its SLA and situation, decide the regulatory action, select the right capability, and execute a configured step flow end-to-end
@@ -142,7 +142,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 3/3 | ✓ Complete | 2026-03-17 |
-| 2. Access Layer | 0/3 | Not started | - |
+| 2. Access Layer | 0/3 | Planned | - |
 | 3. Orchestration Engine | 0/3 | Not started | - |
 | 4. Intelligence Layer | 0/3 | Not started | - |
 | 5. Skills Pipeline | 0/3 | Not started | - |
