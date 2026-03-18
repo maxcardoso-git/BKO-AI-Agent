@@ -47,7 +47,7 @@ export async function createSession(accessToken: string, user: { id: string; ema
   const cookieStore = await cookies()
   cookieStore.set('session', sessionData, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: process.env.SECURE_COOKIE === 'true',
     sameSite: 'lax',
     maxAge: 8 * 60 * 60,
     path: '/',
