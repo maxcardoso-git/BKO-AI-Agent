@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Cada reclamacao tratada com conformidade regulatoria, artefatos rastreaveis, HITL obrigatorio, sem perder prazo
-**Current focus:** Phase 4 — Intelligence Layer
+**Current focus:** Phase 6 — HITL (Human-in-the-Loop)
 
 ## Current Position
 
-Phase: 5 of 7 (Skills Pipeline) — In progress
-Plan: 2 of 3 in phase 05 (05-01 and 05-02 complete)
-Status: In progress — 05-01 and 05-02 done, 05-03 pending
-Last activity: 2026-03-17 — Completed 05-02-PLAN.md (ApplyPersonaTone real implementation — all 14 SKLL-01..14 skills operational)
+Phase: 5 of 7 (Skills Pipeline) — COMPLETE
+Plan: 3 of 3 in phase 05 (all complete)
+Status: Phase 5 COMPLETE — all 3 plans done, all 19 skills operational
+Last activity: 2026-03-18 — Completed 05-03-PLAN.md (Wave 3 skills: HumanDiffCapture, PersistMemory, TrackTokenUsage, AuditTrail — zero stubs remain)
 
-Progress: [████████░░] 68% (15/22 plans)
+Progress: [█████████░] 73% (16/22 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6 (updated after 04-02)
-- Average duration: 9.5 min
-- Total execution time: ~1.0 hours
+- Total plans completed: 16
+- Average duration: ~8 min
+- Total execution time: ~2.0 hours
 
 **By Phase:**
 
@@ -30,11 +30,12 @@ Progress: [████████░░] 68% (15/22 plans)
 | 01-foundation | 3/3 DONE | 29 min | 9.7 min |
 | 02-access-layer | 4/4 DONE | ~61 min | ~15 min |
 | 03-orchestration-engine | 3/3 DONE | ~18 min | ~6 min |
-| 04-intelligence-layer | 3/4 IN PROGRESS | ~24 min | ~8 min |
+| 04-intelligence-layer | 4/4 DONE | ~32 min | ~8 min |
+| 05-skills-pipeline | 3/3 DONE | ~7 min | ~2 min |
 
 **Recent Trend:**
-- Last 5 plans: 45 min, 2 min, 4 min, 18 min, 2 min
-- Trend: AI service wiring plans are fast (~2 min) when no npm installs needed.
+- Last 5 plans: 2 min, 4 min, 18 min, 2 min, 4 min
+- Trend: Skill implementation plans are fast (~2-4 min) — single file edits, no npm installs needed.
 
 *Updated after each plan completion*
 
@@ -108,6 +109,10 @@ Recent decisions affecting current work:
 - 05-01: MemoriaModule imported into ExecucaoModule to enable CaseMemory + HumanFeedbackMemory repos in SkillRegistryService constructor (Wave 3 readiness)
 - 05-01: DetermineRegulatoryAction uses 'classificacao' functionalityType (light model) + generateObject with Zod schema for cost-efficient structured regulatory action classification
 - 05-02: applyPersonaTone is rule-based (no LLM) — forbiddenExpressions stripped via regex, requiredExpressions conditionally appended; graceful no-op returns personaApplied:false when no tipologyId or no active persona found
+- 05-03: HumanDiffCapture is Phase 5 scaffold — stores aiDraft from input, humanFinal:null; real diff computed in Phase 6 HITL when operator approves
+- 05-03: PersistMemory uses raw INSERT with pgvector.toSql() — caseMemoryRepo.create() used only to build object fields, actual insert bypasses TypeORM ORM layer for vector column
+- 05-03: TrackTokenUsage aggregates via JOIN step_execution ON ticketExecutionId — does NOT call tokenUsageTracker.track() since per-call tracking already happened in each AI skill
+- 05-03: embed() from 'ai' SDK chosen for PersistMemory — consistent with VectorSearchService pattern, uses ModelSelectorService.getEmbeddingModel() for centralized model config
 
 ### Pending Todos
 
@@ -122,17 +127,17 @@ None.
 - **Complaint API operational (02-02 done):** GET /api/complaints (paginated, 7 filters), GET /api/complaints/:id (full relations), /executions, /artifacts, /logs sub-resources all live. Frontend can integrate immediately.
 - **Phase 2 complete (02-03 done):** Next.js frontend with login, session management (jose HS256 cookie), complaint queue with URL-driven filters, ticket detail with all sections. AUTH-01..03 and TICK-01,02,04,05,06 satisfied. Ready for Phase 3 processing pipeline.
 - **Phase 2 gap closure complete (02-04 done):** Edge middleware registered, GET /api/tipologies endpoint live, tipologia filter end-to-end in /tickets. All 3 verified gaps closed.
-- **Phase 3 started (03-01 done):** RegulatoryOrchestrationService live with computeSla, selectCapabilityVersion, validatePolicyRules. OrquestracaoModule wired with RegulatorioModule. Ready for 03-02 step execution engine.
-- **03-02 done:** TicketExecutionService live with startExecution, advanceStep, finalizeExecution, retryStep, and 19 skill stubs. ExecucaoModule imports OrquestracaoModule + OperacaoModule. Ready for 03-03 HTTP controller.
 - **Phase 3 COMPLETE (verified 5/5):** RegulatoryOrchestrationService + TicketExecutionService (step engine, 19 skill stubs) + TicketExecutionController (4 BFF endpoints). Module chain ExecucaoModule->OrquestracaoModule->RegulatorioModule fully wired. Ready for Phase 4 Intelligence Layer.
 - **04-01 done:** BaseDeConhecimentoModule live with DocumentIngestionService (PDF RAG ingestion), VectorSearchService (pgvector cosine), TemplateResolverService (3-tier IQI), MandatoryInfoResolverService (dedup). LlmModelConfig entity + migration + 4 model configs seeded. Ready for 04-02 AI classification.
 - **04-02 done:** IaModule live with ModelSelectorService (DB-driven multi-model routing + callWithFallback), PromptBuilderService (3 context-rich prompt builders), ComplaintParsingAgent (generateObject + Zod), DraftGeneratorAgent (generateText). Ready for 04-03 real skill dispatch.
 - **04-03 done:** ComplianceEvaluatorAgent + FinalResponseComposerAgent + TokenUsageTrackerService live. KbManagerController (POST /api/kb/upload, GET /api/kb/documents). TicketExecutionService.executeSkillStub replaced by async executeSkill routing 6 skills to real AI agents + token tracking. ExecucaoModule->IaModule wired, no circular deps. Ready for 04-04 (phase completion).
-- **05-01 done:** SkillRegistryService live as central skill dispatcher (all 19 skills). Wave 1 skills implemented: LoadComplaint (ART-01), NormalizeComplaintText (ART-02), ComputeSla (ART-03), DetermineRegulatoryAction (ART-04 + generateObject + Zod), ValidateReclassification, ValidateReencaminhamento, ValidateCancelamento. AI skills from Phase 4 moved to SkillRegistryService with artifact persistence. TicketExecutionService is now a thin delegation wrapper. MemoriaModule wired into ExecucaoModule. PersonaSeeder creates 4 personas (one per tipology). Ready for 05-02 Wave 2 skills.
-- **05-02 done:** ApplyPersonaTone real implementation replaces stub. Loads Persona by tipologyId+isActive from personaRepo, strips forbiddenExpressions via case-insensitive regex, appends requiredExpressions if absent, graceful no-op fallback. All 14 SKLL-01..14 skills now fully operational (no stubs in waves 1 and 2). Ready for 05-03 Wave 3 skills (HumanDiffCapture, PersistMemory, TrackTokenUsage, AuditTrail).
+- **Phase 4 COMPLETE (04-04 done):** All intelligence layer services verified. 6 real AI skills dispatched from TicketExecutionService. Full complaint AI processing pipeline operational.
+- **Phase 5 COMPLETE:** All 3 plans done. All 19 skills (SKLL-01..SKLL-19) have real implementations — zero stubs remain. Full pipeline from LoadComplaint through AuditTrail is operational. Complaint processed end-to-end: 11 artifact types (ART-01..ART-11) produced, CaseMemory with pgvector embeddings persisted, token usage aggregated, append-only audit log created.
+- **SKLL-20 (execution record):** Satisfied by StepExecution row persistence in TicketExecutionService.advanceStep() — no separate skill needed.
+- **HumanDiffCapture scaffold ready for Phase 6:** human_diff artifact created with `humanFinal: null`; Phase 6 HITL will populate humanFinal when operator approves/edits the AI draft.
 
 ## Session Continuity
 
-Last session: 2026-03-17
-Stopped at: Completed 05-02-PLAN.md — ApplyPersonaTone real implementation (all 14 SKLL-01..14 skills operational)
+Last session: 2026-03-18
+Stopped at: Completed 05-03-PLAN.md — Wave 3 skills complete, Phase 5 COMPLETE, all 19 skills operational
 Resume file: None
