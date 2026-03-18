@@ -57,22 +57,22 @@
 
 ### Step Processor UI
 
-- [ ] **STEP-01**: Tela mostra execucao em etapas com botao "avancar"
-- [ ] **STEP-02**: Cada etapa exibe input, processamento e output (ArtifactViewer)
-- [ ] **STEP-03**: Etapas que exigem humano bloqueiam avanco automatico
-- [ ] **STEP-04**: Tela de demo com 4 colunas: dados ticket, etapa atual, artefato gerado, revisao humana
+- [x] **STEP-01**: Tela mostra execucao em etapas com botao "avancar"
+- [x] **STEP-02**: Cada etapa exibe input, processamento e output (ArtifactViewer)
+- [x] **STEP-03**: Etapas que exigem humano bloqueiam avanco automatico
+- [x] **STEP-04**: Tela de demo com 4 colunas: dados ticket, etapa atual, artefato gerado, revisao humana
 
 ### Steps Designer
 
-- [ ] **DSGN-01**: Admin pode criar fluxo de steps por tipologia
-- [ ] **DSGN-02**: Admin pode criar variacao por situacao regulatoria
-- [ ] **DSGN-03**: Admin pode criar condicao por SLA
-- [ ] **DSGN-04**: Admin pode criar condicao por procedencia/improcedencia
-- [ ] **DSGN-05**: Admin pode criar desvio por nivel de risco
-- [ ] **DSGN-06**: Admin pode definir skills por etapa (binding)
-- [ ] **DSGN-07**: Admin pode definir modelo LLM por etapa
-- [ ] **DSGN-08**: Admin pode marcar etapa como "exige humano"
-- [ ] **DSGN-09**: Designer visual para criar/editar fluxos
+- [x] **DSGN-01**: Admin pode criar fluxo de steps por tipologia
+- [x] **DSGN-02**: Admin pode criar variacao por situacao regulatoria
+- [x] **DSGN-03**: Admin pode criar condicao por SLA
+- [x] **DSGN-04**: Admin pode criar condicao por procedencia/improcedencia
+- [x] **DSGN-05**: Admin pode criar desvio por nivel de risco
+- [x] **DSGN-06**: Admin pode definir skills por etapa (binding)
+- [x] **DSGN-07**: Admin pode definir modelo LLM por etapa
+- [x] **DSGN-08**: Admin pode marcar etapa como "exige humano"
+- [x] **DSGN-09**: Designer visual para criar/editar fluxos
 
 ### Skills Catalog
 
@@ -112,13 +112,13 @@
 
 ### Human-in-the-Loop (HITL)
 
-- [ ] **HITL-01**: Operador pode ver texto gerado pela IA
-- [ ] **HITL-02**: Operador pode editar texto e ver diff entre IA e humano
-- [ ] **HITL-03**: Operador pode preencher checklist regulatorio
-- [ ] **HITL-04**: Operador pode adicionar observacoes
-- [ ] **HITL-05**: Operador pode aprovar resposta final
-- [ ] **HITL-06**: Sistema persiste diff e motivo da correcao para aprendizado
-- [ ] **HITL-07**: Politica de HITL por risco (nivel de revisao varia por criticidade)
+- [x] **HITL-01**: Operador pode ver texto gerado pela IA
+- [x] **HITL-02**: Operador pode editar texto e ver diff entre IA e humano
+- [x] **HITL-03**: Operador pode preencher checklist regulatorio
+- [x] **HITL-04**: Operador pode adicionar observacoes
+- [x] **HITL-05**: Operador pode aprovar resposta final
+- [x] **HITL-06**: Sistema persiste diff e motivo da correcao para aprendizado
+- [x] **HITL-07**: Politica de HITL por risco (nivel de revisao varia por criticidade)
 
 ### Knowledge Base
 
@@ -306,26 +306,26 @@
 | ART-09 | Phase 5 | Complete |
 | ART-10 | Phase 5 | Complete |
 | ART-11 | Phase 5 | Complete |
-| STEP-01 | Phase 6 | Pending |
-| STEP-02 | Phase 6 | Pending |
-| STEP-03 | Phase 6 | Pending |
-| STEP-04 | Phase 6 | Pending |
-| HITL-01 | Phase 6 | Pending |
-| HITL-02 | Phase 6 | Pending |
-| HITL-03 | Phase 6 | Pending |
-| HITL-04 | Phase 6 | Pending |
-| HITL-05 | Phase 6 | Pending |
-| HITL-06 | Phase 6 | Pending |
-| HITL-07 | Phase 6 | Pending |
-| DSGN-01 | Phase 6 | Pending |
-| DSGN-02 | Phase 6 | Pending |
-| DSGN-03 | Phase 6 | Pending |
-| DSGN-04 | Phase 6 | Pending |
-| DSGN-05 | Phase 6 | Pending |
-| DSGN-06 | Phase 6 | Pending |
-| DSGN-07 | Phase 6 | Pending |
-| DSGN-08 | Phase 6 | Pending |
-| DSGN-09 | Phase 6 | Pending |
+| STEP-01 | Phase 6 | Complete |
+| STEP-02 | Phase 6 | Complete |
+| STEP-03 | Phase 6 | Complete |
+| STEP-04 | Phase 6 | Complete |
+| HITL-01 | Phase 6 | Complete |
+| HITL-02 | Phase 6 | Complete |
+| HITL-03 | Phase 6 | Complete |
+| HITL-04 | Phase 6 | Complete |
+| HITL-05 | Phase 6 | Complete |
+| HITL-06 | Phase 6 | Complete |
+| HITL-07 | Phase 6 | Complete |
+| DSGN-01 | Phase 6 | Complete |
+| DSGN-02 | Phase 6 | Complete |
+| DSGN-03 | Phase 6 | Complete |
+| DSGN-04 | Phase 6 | Complete |
+| DSGN-05 | Phase 6 | Complete |
+| DSGN-06 | Phase 6 | Complete |
+| DSGN-07 | Phase 6 | Complete |
+| DSGN-08 | Phase 6 | Complete |
+| DSGN-09 | Phase 6 | Complete |
 | MEM-01 | Phase 7 | Pending |
 | MEM-02 | Phase 7 | Pending |
 | MEM-03 | Phase 7 | Pending |

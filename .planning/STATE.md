@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-03-17)
 
 **Core value:** Cada reclamacao tratada com conformidade regulatoria, artefatos rastreaveis, HITL obrigatorio, sem perder prazo
-**Current focus:** Phase 6 — HITL (Human-in-the-Loop)
+**Current focus:** Phase 7 — Polish & Compliance
 
 ## Current Position
 
@@ -32,7 +32,7 @@ Progress: [█████████░] 87% (20/23 plans)
 | 03-orchestration-engine | 3/3 DONE | ~18 min | ~6 min |
 | 04-intelligence-layer | 4/4 DONE | ~32 min | ~8 min |
 | 05-skills-pipeline | 3/3 DONE | ~7 min | ~2 min |
-| 06-human-review-pipeline | 3/3 DONE | ~50 min | ~17 min |
+| 06-human-review-pipeline | 4/4 DONE | ~65 min | ~16 min |
 
 **Recent Trend:**
 - Last 5 plans: 2 min, 4 min, 18 min, 2 min, 4 min
