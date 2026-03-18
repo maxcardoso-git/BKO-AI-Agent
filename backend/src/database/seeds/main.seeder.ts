@@ -1,6 +1,7 @@
 import { DataSource } from 'typeorm';
 import { Seeder, SeederFactoryManager } from 'typeorm-extension';
 import ComplaintMockSeeder from './complaint-mock.seeder';
+import LlmModelConfigSeeder from './llm-model-config.seeder';
 import OrquestracaoSeeder from './orquestracao.seeder';
 import RegulatorioSeeder from './regulatorio.seeder';
 import UserSeeder from './user.seeder';
@@ -16,6 +17,7 @@ export default class MainSeeder implements Seeder {
     await new RegulatorioSeeder().run(dataSource, factoryManager);
     await new OrquestracaoSeeder().run(dataSource, factoryManager);
     await new ComplaintMockSeeder().run(dataSource, factoryManager);
+    await new LlmModelConfigSeeder().run(dataSource, factoryManager);
 
     console.log('MainSeeder: all seeders completed.');
   }

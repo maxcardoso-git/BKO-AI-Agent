@@ -6,6 +6,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PgvectorBootstrapService } from './database/pgvector-bootstrap.service';
 import { AuthModule } from './modules/auth/auth.module';
+import { BaseDeConhecimentoModule } from './modules/base-de-conhecimento/base-de-conhecimento.module';
 import { ExecucaoModule } from './modules/execucao/execucao.module';
 import { MemoriaModule } from './modules/memoria/memoria.module';
 import { OperacaoModule } from './modules/operacao/operacao.module';
@@ -26,6 +27,7 @@ import { RegulatorioModule } from './modules/regulatorio/regulatorio.module';
         NODE_ENV: Joi.string().default('development'),
         JWT_SECRET: Joi.string().required(),
         JWT_EXPIRES_IN: Joi.string().default('8h'),
+        OPENAI_API_KEY: Joi.string().optional(),
       }),
     }),
     TypeOrmModule.forRootAsync({
@@ -50,6 +52,7 @@ import { RegulatorioModule } from './modules/regulatorio/regulatorio.module';
     OrquestracaoModule,
     ExecucaoModule,
     MemoriaModule,
+    BaseDeConhecimentoModule,
   ],
   controllers: [AppController],
   providers: [AppService, PgvectorBootstrapService],
