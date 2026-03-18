@@ -2,7 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { generateObject } from 'ai';
+import { generateObject, embed } from 'ai';
+import * as pgvector from 'pgvector/pg';
 import { z } from 'zod';
 import { Artifact } from '../entities/artifact.entity';
 import { AuditLog } from '../entities/audit-log.entity';
@@ -219,15 +220,15 @@ export class SkillRegistryService {
         case 'ApplyPersonaTone':
           return await this.applyPersonaTone(input, stepExecutionId, complaintId);
 
-        // === Wave 3 stubs (implemented in 05-03) ===
+        // === Wave 3: Quality, Memory & Instrumentation Skills ===
         case 'HumanDiffCapture':
-          return { diffSummary: 'pending_human_review', changesCount: null };
+          return await this.humanDiffCapture(input, stepExecutionId, complaintId);
         case 'PersistMemory':
-          return { memoryId: 'stub-pending-wave-3' };
+          return await this.persistMemory(input, stepExecutionId, complaintId);
         case 'TrackTokenUsage':
-          return { totalTokens: 0, estimatedCostUsd: 0 };
+          return await this.trackTokenUsage(input);
         case 'AuditTrail':
-          return { auditLogId: 'stub-pending-wave-3' };
+          return await this.auditTrail(input, stepExecutionId, complaintId);
 
         default:
           return { error: 'Unknown skill: ' + skillKey, result: 'no_op' };
@@ -669,5 +670,186 @@ Situacao atual: ${situationKey ?? 'nao informada'}`;
       empathyLevel: persona.empathyLevel,
       assertivenessLevel: persona.assertivenessLevel,
     };
+  }
+
+  // -----------------------------------------------------------------------
+  // Wave 3: Quality, Memory & Instrumentation Skills
+  // -----------------------------------------------------------------------
+
+  /**
+   * SKLL-16: HumanDiffCapture — Phase 5 scaffold placeholder.
+   * Persists ART-11 human_diff artifact with placeholder content.
+   * Real diff computation happens in Phase 6 when human reviews and approves.
+   */
+  private async humanDiffCapture(
+    input: Record<string, unknown>,
+    stepExecutionId: string,
+    complaintId: string,
+  ): Promise<Record<string, unknown>> {
+    const artifact = await this.artifactRepo.save(
+      this.artifactRepo.create({
+        artifactType: 'human_diff',
+        content: {
+          diffSummary: 'pending_human_review',
+          changesCount: null,
+          aiDraft: (input['draftResponse'] as string) ?? (input['draftText'] as string) ?? null,
+          humanFinal: null, // Populated in Phase 6 HITL
+        },
+        version: 1,
+        stepExecutionId,
+        complaintId,
+      }),
+    );
+
+    return {
+      diffSummary: 'pending_human_review',
+      changesCount: null,
+      artifactId: artifact.id,
+    };
+  }
+
+  /**
+   * SKLL-17: PersistMemory — creates CaseMemory row with pgvector embedding.
+   * Uses ModelSelectorService.getEmbeddingModel() + embed() from 'ai' SDK.
+   * Handles embedding failure gracefully with zero vector fallback.
+   */
+  private async persistMemory(
+    input: Record<string, unknown>,
+    stepExecutionId: string,
+    complaintId: string,
+  ): Promise<Record<string, unknown>> {
+    const stepOutputs = (input['stepOutputs'] as Record<string, Record<string, unknown>>) ?? {};
+    const tipologyKey = (input['tipologyKey'] as string) ?? '';
+    const actionKey = (input['selectedActionKey'] as string) ?? null;
+    const tipologyId = (input['tipologyId'] as string) ?? null;
+
+    // Build summary from available step outputs
+    const finalResponse = (stepOutputs['GenerateArtifact']?.['finalResponse'] as string) ??
+      (stepOutputs['DraftFinalResponse']?.['draftResponse'] as string) ?? '';
+    const summaryText = `Reclamacao tipologia ${tipologyKey}, acao: ${actionKey ?? 'responder'}. ${finalResponse.slice(0, 300)}`;
+
+    // Generate embedding
+    let embeddingVector: number[];
+    try {
+      const embeddingModel = await this.modelSelector.getEmbeddingModel();
+      const { embedding } = await embed({ model: embeddingModel, value: summaryText });
+      embeddingVector = embedding;
+    } catch (error) {
+      // Fallback: zero vector (1536 dimensions) — allows row to be saved without embedding API
+      this.logger.warn(`PersistMemory: embedding generation failed, using zero vector fallback. Error: ${error}`);
+      embeddingVector = new Array(1536).fill(0);
+    }
+
+    // Save CaseMemory with embedding
+    const caseMemory = this.caseMemoryRepo.create({
+      summary: summaryText,
+      decision: actionKey,
+      outcome: actionKey,
+      responseSnippet: finalResponse.slice(0, 500) || null,
+      complaintId,
+      tipologyId,
+    });
+
+    // Use raw query for pgvector insert (TypeORM cannot handle vector columns directly)
+    const result = await this.dataSource.query(
+      `INSERT INTO "case_memory" ("id", "summary", "decision", "outcome", "responseSnippet", "embedding", "complaintId", "tipologyId")
+       VALUES (gen_random_uuid(), $1, $2, $3, $4, $5::vector, $6, $7)
+       RETURNING "id"`,
+      [
+        caseMemory.summary,
+        caseMemory.decision,
+        caseMemory.outcome,
+        caseMemory.responseSnippet,
+        pgvector.toSql(embeddingVector),
+        complaintId,
+        tipologyId,
+      ],
+    );
+
+    const memoryId = result[0]?.id ?? null;
+
+    return { memoryId };
+  }
+
+  /**
+   * SKLL-18: TrackTokenUsage — aggregates existing llm_call rows for this execution.
+   * Does NOT call TokenUsageTrackerService.track() — individual tracking already happened per-call.
+   * Uses raw DataSource query for aggregation.
+   */
+  private async trackTokenUsage(
+    input: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    const ticketExecutionId = (input['ticketExecutionId'] as string) ??
+      (input['executionId'] as string) ?? null;
+
+    if (!ticketExecutionId) {
+      return { totalTokens: 0, estimatedCostUsd: 0, error: 'No ticketExecutionId provided' };
+    }
+
+    const result = await this.dataSource.query(
+      `SELECT
+         COALESCE(SUM(lc."totalTokens"), 0) AS total_tokens,
+         COALESCE(SUM(lc."costUsd"), 0) AS total_cost_usd,
+         COUNT(lc."id") AS total_calls
+       FROM "llm_call" lc
+       INNER JOIN "step_execution" se ON lc."stepExecutionId" = se."id"
+       WHERE se."ticketExecutionId" = $1`,
+      [ticketExecutionId],
+    );
+
+    return {
+      totalTokens: Number(result[0]?.total_tokens ?? 0),
+      estimatedCostUsd: Number(result[0]?.total_cost_usd ?? 0),
+      totalLlmCalls: Number(result[0]?.total_calls ?? 0),
+    };
+  }
+
+  /**
+   * SKLL-19: AuditTrail — creates append-only AuditLog entry with full execution snapshot.
+   * Persists ART-10 audit_trail artifact.
+   * AuditLog has no updatedAt (append-only by design).
+   */
+  private async auditTrail(
+    input: Record<string, unknown>,
+    stepExecutionId: string,
+    complaintId: string,
+  ): Promise<Record<string, unknown>> {
+    const ticketExecutionId = (input['ticketExecutionId'] as string) ??
+      (input['executionId'] as string) ?? null;
+
+    const log = await this.auditLogRepo.save(
+      this.auditLogRepo.create({
+        action: 'skill_audit_trail',
+        entityType: 'ticket_execution',
+        entityId: ticketExecutionId ?? complaintId,
+        details: {
+          complaintId,
+          stepOutputs: input['stepOutputs'] ?? {},
+          tipologyKey: input['tipologyKey'] ?? null,
+          selectedActionKey: input['selectedActionKey'] ?? null,
+          slaDeadline: input['slaDeadline'] ?? null,
+          situationKey: input['situationKey'] ?? null,
+        },
+      }),
+    );
+
+    // Persist ART-10 audit_trail artifact
+    const artifact = await this.artifactRepo.save(
+      this.artifactRepo.create({
+        artifactType: 'audit_trail',
+        content: {
+          auditLogId: log.id,
+          action: 'skill_audit_trail',
+          entityType: 'ticket_execution',
+          entityId: ticketExecutionId ?? complaintId,
+          details: log.details,
+        },
+        version: 1,
+        stepExecutionId,
+        complaintId,
+      }),
+    );
+
+    return { auditLogId: log.id, artifactId: artifact.id };
   }
 }
