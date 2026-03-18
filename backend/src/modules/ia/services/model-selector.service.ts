@@ -129,7 +129,7 @@ export class ModelSelectorService {
    * Returns the embedding model (always OpenAI text-embedding-3-small for now).
    * Uses the 'embeddings' functionalityType config for API key resolution.
    */
-  async getEmbeddingModel(): Promise<EmbeddingModel<string>> {
+  async getEmbeddingModel(): Promise<EmbeddingModel> {
     const config = await this.getConfig('embeddings');
     const apiKey = config.apiKeyEnvVar
       ? this.configService.get<string>(config.apiKeyEnvVar)

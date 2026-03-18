@@ -76,7 +76,7 @@ export class DraftGeneratorAgent {
           system,
           prompt: user,
           temperature: config.temperature,
-          maxTokens: config.maxTokens ?? 4096,
+          maxOutputTokens: config.maxTokens ?? 4096,
         });
         const latencyMs = Date.now() - startTime;
 

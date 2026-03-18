@@ -395,7 +395,7 @@ Situacao atual: ${situationKey ?? 'nao informada'}`;
           system: systemPrompt,
           prompt: `Reclamacao:\n${complaintText}`,
           temperature: config.temperature,
-          maxTokens: config.maxTokens ?? 512,
+          maxOutputTokens: config.maxTokens ?? 512,
         });
         const latencyMs = Date.now() - startTime;
 

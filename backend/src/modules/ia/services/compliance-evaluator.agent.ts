@@ -93,7 +93,7 @@ export class ComplianceEvaluatorAgent {
           system,
           prompt: user,
           temperature: config.temperature,
-          maxTokens: config.maxTokens ?? 2048,
+          maxOutputTokens: config.maxTokens ?? 2048,
         });
         const latencyMs = Date.now() - startTime;
 

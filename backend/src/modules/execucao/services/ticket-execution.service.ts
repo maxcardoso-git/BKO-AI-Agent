@@ -11,6 +11,7 @@ import { Artifact } from '../entities/artifact.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { RegulatoryOrchestrationService } from '../../orquestracao/services/regulatory-orchestration.service';
 import { SkillRegistryService } from './skill-registry.service';
+import { HitlPolicyService } from './human-review.service';
 
 interface ExecutionContext {
   tipologyKey: string;
@@ -52,6 +53,8 @@ export class TicketExecutionService {
     private readonly orchService: RegulatoryOrchestrationService,
 
     private readonly skillRegistry: SkillRegistryService,
+
+    private readonly hitlPolicyService: HitlPolicyService,
   ) {}
 
   /**
@@ -209,8 +212,14 @@ export class TicketExecutionService {
       );
     }
 
-    // 8. Human required pause
-    if (currentStep.isHumanRequired && !operatorInput) {
+    // 8. Human required pause (risk-aware via HitlPolicyService)
+    if (
+      this.hitlPolicyService.shouldRequireHumanReview(
+        currentStep.isHumanRequired,
+        complaint?.riskLevel ?? null,
+      ) &&
+      !operatorInput
+    ) {
       const stepExec = this.stepExecutionRepo.create({
         ticketExecutionId: executionId,
         stepDefinitionId: currentStep.id,

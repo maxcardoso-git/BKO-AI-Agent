@@ -38,8 +38,10 @@ export class DocumentIngestionService {
     // 1. Extract text based on mime type
     let text: string;
     if (mimeType === 'application/pdf') {
-      // pdf-parse is CJS — use dynamic import
-      const pdfParse = (await import('pdf-parse')).default;
+      // pdf-parse is CJS — use dynamic import; cast to any to avoid type mismatch
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pdfMod = await import('pdf-parse') as any;
+      const pdfParse = pdfMod.default ?? pdfMod;
       const parsed = await pdfParse(buffer);
       text = parsed.text;
     } else {
