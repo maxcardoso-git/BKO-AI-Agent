@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 3 of 7 (Orchestration Engine) — COMPLETE
-Plan: 3 of 3 in phase 03 (all complete)
-Status: Phase 3 fully closed — 03-01, 03-02, 03-03 done, verified 5/5
-Last activity: 2026-03-17 — Phase 3 complete. Verification passed. Ready for Phase 4.
+Phase: 4 of 7 (Intelligence Layer) — In progress
+Plan: 1 of 4 in phase 04 complete (04-01 done)
+Status: 04-01 complete — BaseDeConhecimentoModule, DocumentIngestionService, VectorSearchService, TemplateResolverService, MandatoryInfoResolverService, LlmModelConfig entity + migration + seed
+Last activity: 2026-03-18 — Completed 04-01-PLAN.md. RAG foundation established. Ready for 04-02 (AI classification).
 
-Progress: [████████░░] 41% (10/22 plans)
+Progress: [████████░░] 45% (11/22 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 10.3 min
-- Total execution time: 0.69 hours
+- Total plans completed: 5 (updated after 04-01)
+- Average duration: 11.2 min
+- Total execution time: ~1.0 hours
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [████████░░] 41% (10/22 plans)
 | 01-foundation | 3/3 DONE | 29 min | 9.7 min |
 | 02-access-layer | 4/4 DONE | ~61 min | ~15 min |
 | 03-orchestration-engine | 3/3 DONE | ~18 min | ~6 min |
+| 04-intelligence-layer | 1/4 IN PROGRESS | ~18 min | ~18 min |
 
 **Recent Trend:**
-- Last 5 plans: 8 min, 14 min, 45 min, 2 min, 4 min
-- Trend: Backend service plans are very fast (~4 min). UI plans take longer (~45 min).
+- Last 5 plans: 14 min, 45 min, 2 min, 4 min, 18 min
+- Trend: AI/pgvector service plans ~18 min (npm installs slow things down).
 
 *Updated after each plan completion*
 
@@ -87,6 +88,12 @@ Recent decisions affecting current work:
 - 03-02: executeSkillStub is synchronous — all stubs are pure computation, no async needed
 - 03-03: TicketExecutionController uses @Controller() (empty) not @Controller('api') — global setGlobalPrefix('api') already prefixes all routes
 - 03-03: scripts/ excluded from tsconfig — verify-e2e.ts references future-phase entities not yet created
+- 04-01: pdf-parse must be dynamically imported (import()) — CJS module in NestJS ESM context
+- 04-01: pgvector insert via raw DataSource.query() with pgvector.toSql() + $N::vector cast — TypeORM QueryBuilder cannot handle vector columns
+- 04-01: VectorSearchService filters by active document version IDs before cosine query — avoids stale chunk matches
+- 04-01: cosine distance ORDER BY ASC (lower = more similar); similarity output = 1 - distance
+- 04-01: OPENAI_API_KEY added as Joi.string().optional() in AppModule validation schema
+- 04-01: Seeders live in seeds/ not seeders/ — established in phase 01-03
 
 ### Pending Todos
 
@@ -104,9 +111,10 @@ None.
 - **Phase 3 started (03-01 done):** RegulatoryOrchestrationService live with computeSla, selectCapabilityVersion, validatePolicyRules. OrquestracaoModule wired with RegulatorioModule. Ready for 03-02 step execution engine.
 - **03-02 done:** TicketExecutionService live with startExecution, advanceStep, finalizeExecution, retryStep, and 19 skill stubs. ExecucaoModule imports OrquestracaoModule + OperacaoModule. Ready for 03-03 HTTP controller.
 - **Phase 3 COMPLETE (verified 5/5):** RegulatoryOrchestrationService + TicketExecutionService (step engine, 19 skill stubs) + TicketExecutionController (4 BFF endpoints). Module chain ExecucaoModule->OrquestracaoModule->RegulatorioModule fully wired. Ready for Phase 4 Intelligence Layer.
+- **04-01 done:** BaseDeConhecimentoModule live with DocumentIngestionService (PDF RAG ingestion), VectorSearchService (pgvector cosine), TemplateResolverService (3-tier IQI), MandatoryInfoResolverService (dedup). LlmModelConfig entity + migration + 4 model configs seeded. Ready for 04-02 AI classification.
 
 ## Session Continuity
 
-Last session: 2026-03-17
-Stopped at: Phase 3 complete — all 3 plans done, verification passed
+Last session: 2026-03-18
+Stopped at: Completed 04-01-PLAN.md — RAG foundation + BaseDeConhecimentoModule
 Resume file: None
