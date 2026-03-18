@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 6 of 7 (Human Review Pipeline) — COMPLETE
-Plan: 3 of 3 in phase 06 — ALL DONE
-Status: Phase 6 complete — HITL editor + steps designer done, VPS build clean, ready for Phase 7
-Last activity: 2026-03-18 — Completed 06-03-PLAN.md (HITL editor page, submitHumanReview action, StepsDesigner admin pages with transitions editor)
+Plan: 4 of 4 in phase 06 — ALL DONE (gap closure complete)
+Status: Phase 6 fully complete — schema mismatch fixed, transition save/load round-trip correct
+Last activity: 2026-03-18 — Completed 06-04-PLAN.md (gap closure: getTransitions/saveTransitions DTO mapping fix, TransitionsEditor step-key dropdown)
 
-Progress: [█████████░] 86% (19/22 plans)
+Progress: [█████████░] 87% (20/23 plans)
 
 ## Performance Metrics
 
@@ -152,9 +152,10 @@ None.
 - **06-01 COMPLETE:** HumanReviewController (POST/GET /api/executions/:execId/steps/:stepExecId/review), HitlPolicyService (risk-aware HITL gate), StepsDesignerController (5 admin endpoints). VPS build passes clean. Plans 06-02 and 06-03 can be built against this stable backend API.
 - **06-02 COMPLETE:** StepProcessor 4-column page at /tickets/[id]/execution/[execId]. advanceStep/retryStep/startExecution server actions with typed ActionState. HITL editor link appears when paused_human. VPS build clean with zero TS errors. Pre-placed 06-03 files (hitl-editor, steps-designer) also build clean after installing react-diff-viewer-continued and shadcn tabs/textarea/checkbox.
 - **PHASE 6 COMPLETE (06-03 done):** HITL editor at /tickets/:id/execution/:execId/review/:stepExecId with 4-tab layout (AI text/Edit/Diff/Checklist). submitHumanReview POSTs review + advances with operatorInput. Admin steps designer at /admin/steps and /admin/steps/:capabilityId with skillKey/llmModel inputs, isHumanRequired toggle, step reorder, per-step TransitionsEditor (lazy-loaded via server action). VPS build passes clean. Ready for Phase 7 (Reporting Dashboard).
+- **06-04 gap closure done:** Frontend TransitionsEditor now correctly maps backend conditionType/conditionExpression/targetStepKey ↔ UI model. getTransitions reads backend fields; saveTransitions serializes to backend DTO shape. TransitionsEditor uses step-key dropdown instead of order number input. VPS tsc and npm run build clean.
 
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Completed 06-03-PLAN.md — Phase 6 COMPLETE (HITL editor + steps designer), VPS build passes clean
+Stopped at: Completed 06-04-PLAN.md — Phase 6 gap closure complete (transition DTO schema fix), VPS build passes clean
 Resume file: None
