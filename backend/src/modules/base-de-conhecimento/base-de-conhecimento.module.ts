@@ -7,6 +7,7 @@ import { DocumentIngestionService } from './services/document-ingestion.service'
 import { VectorSearchService } from './services/vector-search.service';
 import { TemplateResolverService } from './services/template-resolver.service';
 import { MandatoryInfoResolverService } from './services/mandatory-info-resolver.service';
+import { KbManagerController } from './controllers/kb-manager.controller';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { MandatoryInfoResolverService } from './services/mandatory-info-resolver
     MemoriaModule,       // provides KbDocument, KbDocumentVersion, KbChunk repos
     RegulatorioModule,   // provides ResponseTemplate, MandatoryInfoRule repos
   ],
+  controllers: [KbManagerController],
   providers: [
     DocumentIngestionService,
     VectorSearchService,
