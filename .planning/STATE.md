@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 3 of 7 (Orchestration Engine) — In progress
-Plan: 2 of N in phase 03 (03-02 complete)
-Status: Phase 3 in progress — 03-01, 03-02 done
-Last activity: 2026-03-17 — Completed 03-02-PLAN.md (TicketExecutionService + ExecucaoModule wiring)
+Plan: 3 of N in phase 03 (03-03 complete)
+Status: Phase 3 in progress — 03-01, 03-02, 03-03 done
+Last activity: 2026-03-17 — Completed 03-03-PLAN.md (TicketExecutionController BFF endpoints)
 
-Progress: [███████░░░] 36% (9/22 plans)
+Progress: [████████░░] 41% (10/22 plans)
 
 ## Performance Metrics
 
@@ -29,7 +29,7 @@ Progress: [███████░░░] 36% (9/22 plans)
 |-------|-------|-------|----------|
 | 01-foundation | 3/3 DONE | 29 min | 9.7 min |
 | 02-access-layer | 4/4 DONE | ~61 min | ~15 min |
-| 03-orchestration-engine | 2/? IN PROGRESS | ~13 min | ~6.5 min |
+| 03-orchestration-engine | 3/? IN PROGRESS | ~18 min | ~6 min |
 
 **Recent Trend:**
 - Last 5 plans: 8 min, 14 min, 45 min, 2 min, 4 min
@@ -85,6 +85,8 @@ Recent decisions affecting current work:
 - 03-02: advanceStep locates next step by array index not stepOrder arithmetic — robust to non-sequential stepOrder values
 - 03-02: retryStep updates existing StepExecution row (increment retryCount), does NOT create new row
 - 03-02: executeSkillStub is synchronous — all stubs are pure computation, no async needed
+- 03-03: TicketExecutionController uses @Controller() (empty) not @Controller('api') — global setGlobalPrefix('api') already prefixes all routes
+- 03-03: scripts/ excluded from tsconfig — verify-e2e.ts references future-phase entities not yet created
 
 ### Pending Todos
 
@@ -101,9 +103,10 @@ None.
 - **Phase 2 gap closure complete (02-04 done):** Edge middleware registered, GET /api/tipologies endpoint live, tipologia filter end-to-end in /tickets. All 3 verified gaps closed.
 - **Phase 3 started (03-01 done):** RegulatoryOrchestrationService live with computeSla, selectCapabilityVersion, validatePolicyRules. OrquestracaoModule wired with RegulatorioModule. Ready for 03-02 step execution engine.
 - **03-02 done:** TicketExecutionService live with startExecution, advanceStep, finalizeExecution, retryStep, and 19 skill stubs. ExecucaoModule imports OrquestracaoModule + OperacaoModule. Ready for 03-03 HTTP controller.
+- **03-03 done:** TicketExecutionController live with 4 POST BFF endpoints. Registered in ExecucaoModule. TypeScript compiles cleanly. E2E curl verification deferred to remote server.
 
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Completed 03-02-PLAN.md — TicketExecutionService + ExecucaoModule wiring
+Stopped at: Completed 03-03-PLAN.md — TicketExecutionController BFF endpoints
 Resume file: None
