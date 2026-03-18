@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 4 of 7 (Intelligence Layer) — In progress
-Plan: 1 of 4 in phase 04 complete (04-01 done)
-Status: 04-01 complete — BaseDeConhecimentoModule, DocumentIngestionService, VectorSearchService, TemplateResolverService, MandatoryInfoResolverService, LlmModelConfig entity + migration + seed
-Last activity: 2026-03-18 — Completed 04-01-PLAN.md. RAG foundation established. Ready for 04-02 (AI classification).
+Plan: 2 of 4 in phase 04 complete (04-02 done)
+Status: 04-02 complete — IaModule with ModelSelectorService (DB-driven multi-model routing + fallback), PromptBuilderService (3 prompt builders), ComplaintParsingAgent (generateObject + Zod), DraftGeneratorAgent (generateText)
+Last activity: 2026-03-18 — Completed 04-02-PLAN.md. AI service module established. Ready for 04-03 (step execution with real AI dispatch).
 
-Progress: [████████░░] 45% (11/22 plans)
+Progress: [████████░░] 50% (12/22 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5 (updated after 04-01)
-- Average duration: 11.2 min
+- Total plans completed: 6 (updated after 04-02)
+- Average duration: 9.5 min
 - Total execution time: ~1.0 hours
 
 **By Phase:**
@@ -30,11 +30,11 @@ Progress: [████████░░] 45% (11/22 plans)
 | 01-foundation | 3/3 DONE | 29 min | 9.7 min |
 | 02-access-layer | 4/4 DONE | ~61 min | ~15 min |
 | 03-orchestration-engine | 3/3 DONE | ~18 min | ~6 min |
-| 04-intelligence-layer | 1/4 IN PROGRESS | ~18 min | ~18 min |
+| 04-intelligence-layer | 2/4 IN PROGRESS | ~20 min | ~10 min |
 
 **Recent Trend:**
-- Last 5 plans: 14 min, 45 min, 2 min, 4 min, 18 min
-- Trend: AI/pgvector service plans ~18 min (npm installs slow things down).
+- Last 5 plans: 45 min, 2 min, 4 min, 18 min, 2 min
+- Trend: AI service wiring plans are fast (~2 min) when no npm installs needed.
 
 *Updated after each plan completion*
 
@@ -94,6 +94,10 @@ Recent decisions affecting current work:
 - 04-01: cosine distance ORDER BY ASC (lower = more similar); similarity output = 1 - distance
 - 04-01: OPENAI_API_KEY added as Joi.string().optional() in AppModule validation schema
 - 04-01: Seeders live in seeds/ not seeders/ — established in phase 01-03
+- 04-02: callWithFallback generic pattern: single method wraps primary+fallback, callFn receives ModelWithConfig
+- 04-02: classify()/generate() shaped as Record<string,unknown> for TicketExecutionService skill dispatch interface
+- 04-02: IaModule not added to AppModule directly — transitively loaded via ExecucaoModule in 04-03
+- 04-02: PromptBuilderService has 3 builders: classification (generateObject/Zod), draft (generateText), compliance (generateObject in 04-04)
 
 ### Pending Todos
 
@@ -112,9 +116,10 @@ None.
 - **03-02 done:** TicketExecutionService live with startExecution, advanceStep, finalizeExecution, retryStep, and 19 skill stubs. ExecucaoModule imports OrquestracaoModule + OperacaoModule. Ready for 03-03 HTTP controller.
 - **Phase 3 COMPLETE (verified 5/5):** RegulatoryOrchestrationService + TicketExecutionService (step engine, 19 skill stubs) + TicketExecutionController (4 BFF endpoints). Module chain ExecucaoModule->OrquestracaoModule->RegulatorioModule fully wired. Ready for Phase 4 Intelligence Layer.
 - **04-01 done:** BaseDeConhecimentoModule live with DocumentIngestionService (PDF RAG ingestion), VectorSearchService (pgvector cosine), TemplateResolverService (3-tier IQI), MandatoryInfoResolverService (dedup). LlmModelConfig entity + migration + 4 model configs seeded. Ready for 04-02 AI classification.
+- **04-02 done:** IaModule live with ModelSelectorService (DB-driven multi-model routing + callWithFallback), PromptBuilderService (3 context-rich prompt builders), ComplaintParsingAgent (generateObject + Zod), DraftGeneratorAgent (generateText). Ready for 04-03 real skill dispatch.
 
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Completed 04-01-PLAN.md — RAG foundation + BaseDeConhecimentoModule
+Stopped at: Completed 04-02-PLAN.md — IaModule + AI services (ModelSelector, PromptBuilder, ComplaintParsing, DraftGenerator)
 Resume file: None
