@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 7 of 7 (Polish & Compliance) — In progress
-Plan: 3 of 4 in phase 07 — 07-03 DONE (ObservabilityService + 6-panel dashboard + Trace Explorer + ticket logs)
-Status: In progress — 3/4 plans done in phase 07
-Last activity: 2026-03-18 — Completed 07-03-PLAN.md (8-endpoint ObservabilityService, recharts/shadcn chart, dashboard+trace+logs pages)
+Phase: 7 of 7 (Polish & Compliance) — COMPLETE
+Plan: 4 of 4 in phase 07 — 07-04 DONE (SensitiveDataInterceptor + CPF/phone masking + frontend mask.ts)
+Status: ALL PHASES COMPLETE — 23/23 plans done
+Last activity: 2026-03-18 — Completed 07-04-PLAN.md (NestJS interceptor SEC-01..SEC-05, controller-scoped CPF/phone redaction, frontend maskSensitive in ticket page)
 
-Progress: [█████████░] 96% (22/23 plans)
+Progress: [██████████] 100% (23/23 plans)
 
 ## Performance Metrics
 
@@ -159,14 +159,18 @@ None.
 - **07-01 DONE:** MemoryRetrievalService (findSimilarCases, findSimilarCorrections, findStylePatterns) + MemoryFeedbackService (persistFeedback with pgvector.toSql) wired. PromptContext extended with memory fields. DraftFinalResponse skill retrieves memory context before generating draft. HumanReviewService persists feedback after review save. VPS build clean. Note: StyleMemory uses expressionText (text) not style.expression (jsonb) — adapted.
 - **07-02 COMPLETE:** AdminConfigController (12 endpoints @Roles(ADMIN)), AdminConfigService (CRUD + StyleMemory sync), 5 admin page groups (/admin/personas, /admin/templates, /admin/skills, /admin/capabilities, /admin/models). forwardRef fix: IaModule uses forwardRef(() => BaseDeConhecimentoModule) to break IaModule->BDCM->MemoriaModule->forwardRef(IaModule) circle. 4 seeded personas confirmed. Frontend builds clean. 403 on non-admin confirmed.
 - **07-02 key decisions:** GET /api/admin/capability-versions (not capabilities) to avoid StepsDesignerController conflict; PORT env var in main.ts; StyleMemory sync is non-fatal try/catch.
+- **07-04:** SensitiveDataInterceptor at controller class level (not global) — avoids deep recursion on large artifact blobs in non-complaint endpoints
+- **07-04:** ObservabilityController excluded from SensitiveDataInterceptor — SEC-02 structurally safe (LlmCall has no promptText/completionText columns)
+- **07-04:** Frontend maskSensitive applied in page.tsx before spreading to child components — all children receive pre-masked data
 - **07-03:** step_execution column is stepKey not skillKey — plan SQL had wrong column name
 - **07-03:** token_usage has no estimatedCostUsd or stepExecutionId — cost aggregation uses llm_call.costUsd
 - **07-03:** audit_log has no ticketExecutionId FK — getTicketLogs uses UNION entityType pattern
 - **07-03:** recharts --legacy-peer-deps + react-is override for React 19.2.3 compat
 - **07-03 DONE:** ObservabilityService (8 raw-SQL methods) + ObservabilityController (8 routes @Roles(ADMIN)) + recharts + shadcn chart + /admin/observability dashboard (6 panels) + trace explorer + ticket logs. VPS build clean. SEC-02 confirmed: ObservabilityController does NOT need SensitiveDataInterceptor.
+- **07-04 DONE (PHASE 7 COMPLETE):** SensitiveDataInterceptor (backend/src/interceptors/) with recursive CPF/phone redaction applied to ExecutionController, HumanReviewController, ComplaintController. frontend/src/lib/mask.ts (maskCpf, maskPhone, maskSensitive). Ticket detail page applies maskSensitive to rawText + normalizedText. Both backend and frontend build clean on VPS. SEC-01..SEC-05 all satisfied. Project COMPLETE — 23/23 plans done.
 
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Completed 07-03-PLAN.md — ObservabilityService + dashboard + trace + ticket logs, VPS builds clean
+Stopped at: Completed 07-04-PLAN.md — SensitiveDataInterceptor + frontend mask.ts — PROJECT COMPLETE (23/23 plans)
 Resume file: None
