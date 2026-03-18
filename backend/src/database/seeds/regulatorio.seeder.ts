@@ -13,13 +13,15 @@ import { MandatoryInfoRule } from '../../modules/regulatorio/entities/mandatory-
 
 export default class RegulatorioSeeder implements Seeder {
   async run(dataSource: DataSource, _factoryManager: SeederFactoryManager): Promise<void> {
-    // --- Tipologias ---
+    // --- Tipologias (baseadas nas Modalidades reais da Anatel) ---
     const tipologyRepo = dataSource.getRepository(Tipology);
     const tipologias = [
-      { key: 'cobranca', label: 'Cobranca', slaBusinessDays: 10 },
-      { key: 'cancelamento', label: 'Cancelamento', slaBusinessDays: 10 },
-      { key: 'portabilidade', label: 'Portabilidade', slaBusinessDays: 10 },
-      { key: 'qualidade', label: 'Qualidade / Reparo', slaBusinessDays: 10 },
+      { key: 'cobranca',        label: 'Cobrança',                                                                    slaBusinessDays: 10 },
+      { key: 'plano_servicos',  label: 'Plano de Serviços, Oferta, Bônus, Promoções e Mensagens Publicitárias',       slaBusinessDays: 10 },
+      { key: 'cancelamento',    label: 'Cancelamento',                                                                slaBusinessDays: 10 },
+      { key: 'portabilidade',   label: 'Portabilidade',                                                               slaBusinessDays: 10 },
+      { key: 'qualidade',       label: 'Qualidade / Reparo',                                                          slaBusinessDays: 10 },
+      { key: 'atendimento',     label: 'Atendimento',                                                                 slaBusinessDays: 10 },
     ];
     await tipologyRepo.upsert(tipologias, { conflictPaths: ['key'] });
 
@@ -29,49 +31,36 @@ export default class RegulatorioSeeder implements Seeder {
       tipologyMap[t.key] = t;
     }
 
-    // --- Subtipologias ---
+    // --- Subtipologias (baseadas nos Motivos reais da Anatel) ---
     const subtipologyRepo = dataSource.getRepository(Subtipology);
     const subtipologias = [
-      {
-        key: 'cobranca_indevida',
-        label: 'Cobranca Indevida',
-        tipologyId: tipologyMap['cobranca'].id,
-      },
-      {
-        key: 'cobranca_apos_cancelamento',
-        label: 'Cobranca Apos Cancelamento',
-        tipologyId: tipologyMap['cobranca'].id,
-      },
-      {
-        key: 'cancelamento_linha',
-        label: 'Cancelamento de Linha',
-        tipologyId: tipologyMap['cancelamento'].id,
-      },
-      {
-        key: 'cancelamento_combo',
-        label: 'Cancelamento Combo',
-        tipologyId: tipologyMap['cancelamento'].id,
-      },
-      {
-        key: 'portabilidade_fixa',
-        label: 'Portabilidade Fixa',
-        tipologyId: tipologyMap['portabilidade'].id,
-      },
-      {
-        key: 'portabilidade_movel',
-        label: 'Portabilidade Movel',
-        tipologyId: tipologyMap['portabilidade'].id,
-      },
-      {
-        key: 'qualidade_sinal',
-        label: 'Qualidade de Sinal',
-        tipologyId: tipologyMap['qualidade'].id,
-      },
-      {
-        key: 'qualidade_internet',
-        label: 'Qualidade de Internet',
-        tipologyId: tipologyMap['qualidade'].id,
-      },
+      // Cobrança
+      { key: 'cobranca_servico_nao_contratado',  label: 'Cobrança de serviço, produto ou plano não contratado',               tipologyId: tipologyMap['cobranca'].id },
+      { key: 'cobranca_apos_portabilidade',      label: 'Cobrança após portabilidade',                                        tipologyId: tipologyMap['cobranca'].id },
+      { key: 'cobranca_adicional_nao_contratado',label: 'Cobrança de serviços adicionais não contratados',                    tipologyId: tipologyMap['cobranca'].id },
+      { key: 'cobranca_sem_documento',           label: 'Atraso ou não entrega do documento de cobrança',                     tipologyId: tipologyMap['cobranca'].id },
+      { key: 'cobranca_valor_nao_informado',     label: 'Cobrança de valores ou taxas não informadas anteriormente',          tipologyId: tipologyMap['cobranca'].id },
+      { key: 'cobranca_apos_cancelamento',       label: 'Cobrança após cancelamento',                                         tipologyId: tipologyMap['cobranca'].id },
+      { key: 'cobranca_multa_fidelizacao',       label: 'Cobrança indevida de multa por fidelização (multa rescisória)',      tipologyId: tipologyMap['cobranca'].id },
+      { key: 'cobranca_valor_ja_pago',           label: 'Cobrança de valores que já foram pagos',                             tipologyId: tipologyMap['cobranca'].id },
+      { key: 'cobranca_contestacao',             label: 'Consumidor não consegue contestar a cobrança',                       tipologyId: tipologyMap['cobranca'].id },
+      { key: 'cobranca_indevida',                label: 'Cobrança indevida',                                                  tipologyId: tipologyMap['cobranca'].id },
+      // Plano de Serviços
+      { key: 'plano_ligacoes_inoportunas',       label: 'Recebimento inoportuno de ligações de oferta',                       tipologyId: tipologyMap['plano_servicos'].id },
+      { key: 'plano_mensagens_nao_autorizadas',  label: 'Recebimento de mensagens publicitárias não autorizadas',             tipologyId: tipologyMap['plano_servicos'].id },
+      { key: 'plano_inclusao_indevida',          label: 'Inclusão indevida em promoção',                                      tipologyId: tipologyMap['plano_servicos'].id },
+      { key: 'plano_nao_consegue_aderir',        label: 'Não consegue aderir à promoção',                                     tipologyId: tipologyMap['plano_servicos'].id },
+      { key: 'plano_servico_diferente',          label: 'Produto ou serviço fornecido diferente do que foi ofertado',         tipologyId: tipologyMap['plano_servicos'].id },
+      { key: 'plano_alterado_indevidamente',     label: 'Plano de serviço alterado indevidamente pela operadora',             tipologyId: tipologyMap['plano_servicos'].id },
+      // Cancelamento
+      { key: 'cancelamento_linha',               label: 'Cancelamento de Linha',                                              tipologyId: tipologyMap['cancelamento'].id },
+      { key: 'cancelamento_combo',               label: 'Cancelamento Combo',                                                 tipologyId: tipologyMap['cancelamento'].id },
+      // Portabilidade
+      { key: 'portabilidade_movel',              label: 'Portabilidade Móvel',                                                tipologyId: tipologyMap['portabilidade'].id },
+      { key: 'portabilidade_fixa',               label: 'Portabilidade Fixa',                                                 tipologyId: tipologyMap['portabilidade'].id },
+      // Qualidade
+      { key: 'qualidade_sinal',                  label: 'Qualidade de Sinal',                                                 tipologyId: tipologyMap['qualidade'].id },
+      { key: 'qualidade_internet',               label: 'Qualidade de Internet',                                              tipologyId: tipologyMap['qualidade'].id },
     ];
     await subtipologyRepo.upsert(subtipologias, { conflictPaths: ['key'] });
 
@@ -296,6 +285,23 @@ Equipe de Atendimento BKO`,
         version: 1,
         sourceDocument: 'guia_iqi',
         tipologyId: tipologyMap['qualidade'].id,
+      },
+      {
+        name: 'Template Plano e Servicos',
+        templateContent: `Prezado(a) {{nome_reclamante}},
+
+Em resposta a reclamacao de protocolo {{numero_protocolo}}, referente a {{motivo_reclamacao}} registrada em {{data_reclamacao}}, informamos:
+
+{{providencia_adotada}}
+
+O bloqueio/ajuste solicitado foi {{status_acao}} e o prazo para conclusao total e de ate {{prazo_dias}} dias uteis a partir desta data.
+Caso continue recebendo contatos indesejados dentro deste periodo, orientamos desconsiderar pois ainda estara dentro do prazo de atualizacao sistemica.
+
+Atenciosamente,
+Equipe de Atendimento BKO`,
+        version: 1,
+        sourceDocument: 'guia_iqi',
+        tipologyId: tipologyMap['plano_servicos'].id,
       },
     ];
     // Response templates don't have a unique key column, so we delete+insert to keep idempotent

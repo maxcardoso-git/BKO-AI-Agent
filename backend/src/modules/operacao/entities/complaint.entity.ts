@@ -77,6 +77,72 @@ export class Complaint {
   @Column({ type: 'boolean', nullable: true })
   procedente: boolean | null;
 
+  // --- Campos Anatel reais ---
+
+  /** Modalidade Anatel: "Cobrança", "Plano de serviços, Oferta, Bônus..." */
+  @Column({ type: 'varchar', nullable: true })
+  modalidade: string | null;
+
+  /** Motivo Anatel: "Cobrança de serviço não contratado", "Plano alterado indevidamente"... */
+  @Column({ type: 'varchar', nullable: true })
+  motivo: string | null;
+
+  /** Serviço: "Celular Pós-Pago", "Celular Pré-Pago" */
+  @Column({ type: 'varchar', nullable: true })
+  servicoPrincipal: string | null;
+
+  /** Canal de entrada: "Mobile App", "Usuário WEB", "Call Center", "WhatsApp" */
+  @Column({ type: 'varchar', nullable: true })
+  canalEntrada: string | null;
+
+  /** Ação: "Nova", "Reaberta" */
+  @Column({ type: 'varchar', nullable: true })
+  acao: string | null;
+
+  /** Perfil responsável / fila de roteamento: SKILL_CONTAS_POS, SKILL_GRE, SKILL_SQUAD */
+  @Column({ type: 'varchar', nullable: true })
+  perfilResponsavel: string | null;
+
+  /** Resposta enviada pela operadora à Anatel */
+  @Column({ type: 'text', nullable: true })
+  resposta: string | null;
+
+  /** Nome do cliente reclamante */
+  @Column({ type: 'varchar', nullable: true })
+  clienteNome: string | null;
+
+  /** UF do cliente */
+  @Column({ type: 'varchar', nullable: true })
+  clienteUF: string | null;
+
+  /** Cidade do cliente */
+  @Column({ type: 'varchar', nullable: true })
+  clienteCidade: string | null;
+
+  /** Tipo de pessoa: PF / PJ */
+  @Column({ type: 'varchar', nullable: true })
+  clienteTipoPessoa: string | null;
+
+  /** Nota de satisfação / Risco nota baixa */
+  @Column({ type: 'decimal', precision: 5, scale: 3, nullable: true })
+  nota: number | null;
+
+  /** Protocolo interno da operadora */
+  @Column({ type: 'varchar', nullable: true })
+  protocoloPrestadora: string | null;
+
+  /** Data de cadastro da reclamação na Anatel */
+  @Column({ type: 'timestamp', nullable: true })
+  dataCadastro: Date | null;
+
+  /** Data de finalização na Anatel */
+  @Column({ type: 'timestamp', nullable: true })
+  dataFinalizacao: Date | null;
+
+  /** Campos adicionais Anatel em JSON (motivos, situação focus, retido, etc.) */
+  @Column({ type: 'jsonb', nullable: true })
+  anatelMetadata: Record<string, unknown> | null;
+
   @ManyToOne(() => Tipology, { nullable: true, eager: false })
   @JoinColumn({ name: 'tipologyId' })
   tipology: Tipology | null;
