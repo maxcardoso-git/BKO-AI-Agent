@@ -149,7 +149,43 @@ export class TicketExecutionService {
       }),
     );
 
+    // 14. Fire-and-forget: auto-advance non-human steps in background
+    setImmediate(() => this.autoAdvanceLoop(saved.id).catch(() => {}));
+
     return saved;
+  }
+
+  /**
+   * Auto-advances non-human-required steps until a waiting_human or terminal state is reached.
+   * Called fire-and-forget from startExecution and after human-review submission.
+   */
+  async autoAdvanceLoop(executionId: string): Promise<void> {
+    let maxIterations = 30; // safety cap
+    while (maxIterations-- > 0) {
+      const execution = await this.ticketExecutionRepo.findOne({ where: { id: executionId } });
+      if (!execution || execution.status !== TicketExecutionStatus.RUNNING) break;
+
+      const steps = await this.stepDefinitionRepo.find({
+        where: { capabilityVersionId: execution.capabilityVersionId, isActive: true },
+        order: { stepOrder: 'ASC' },
+      });
+      const currentStep = steps.find((s) => s.key === execution.currentStepKey);
+      if (!currentStep) break;
+
+      // Stop loop if this step requires human review
+      const requiresHuman = this.hitlPolicyService.shouldRequireHumanReview(
+        currentStep.isHumanRequired,
+        null,
+      );
+      if (requiresHuman) break;
+
+      // Advance the step
+      try {
+        await this.advanceStep(executionId);
+      } catch {
+        break;
+      }
+    }
   }
 
   /**
@@ -213,6 +249,7 @@ export class TicketExecutionService {
     }
 
     // 8. Human required pause (risk-aware via HitlPolicyService)
+    // Run the skill FIRST to generate the AI draft, then pause for human review.
     if (
       this.hitlPolicyService.shouldRequireHumanReview(
         currentStep.isHumanRequired,
@@ -220,15 +257,59 @@ export class TicketExecutionService {
       ) &&
       !operatorInput
     ) {
+      // Flatten previous step outputs so the skill has full context
+      const stepOutputsFlat: Record<string, unknown> = {};
+      for (const out of Object.values((execution.metadata as any)?.stepOutputs ?? {})) {
+        Object.assign(stepOutputsFlat, out);
+      }
+      const skillInput: Record<string, unknown> = {
+        ...(execution.metadata as Record<string, unknown>),
+        ...stepOutputsFlat,
+      };
+
+      // Create the step execution record
       const stepExec = this.stepExecutionRepo.create({
         ticketExecutionId: executionId,
         stepDefinitionId: currentStep.id,
         stepKey: currentStep.key,
         status: StepExecutionStatus.WAITING_HUMAN,
         startedAt: new Date(),
-        input: execution.metadata as Record<string, unknown>,
+        input: skillInput,
       });
       await this.stepExecutionRepo.save(stepExec);
+
+      // Run the skill to generate the AI draft before pausing
+      const binding = await this.stepSkillBindingRepo.findOne({
+        where: { stepDefinitionId: currentStep.id, isActive: true },
+        relations: ['skillDefinition'],
+      });
+      if (binding) {
+        try {
+          const output = await this.executeSkill(
+            binding.skillDefinition.key,
+            skillInput,
+            stepExec.id,
+            execution.complaintId,
+          );
+          stepExec.output = output;
+          await this.stepExecutionRepo.save(stepExec);
+
+          // Persist the AI draft as final_response artifact so the review page can load it
+          const aiDraft = (output['draftResponse'] as string) ?? (output['finalResponse'] as string) ?? '';
+          await this.artifactRepo.save(
+            this.artifactRepo.create({
+              artifactType: 'final_response',
+              content: { finalResponse: aiDraft },
+              version: 1,
+              stepExecutionId: stepExec.id,
+              complaintId: execution.complaintId,
+            }),
+          );
+        } catch (err) {
+          // Skill failure does not abort the HITL pause — reviewer can write manually
+          console.error('[HITL] Skill execution failed, pausing without draft', err);
+        }
+      }
 
       execution.status = TicketExecutionStatus.PAUSED_HUMAN;
       await this.ticketExecutionRepo.save(execution);
@@ -250,8 +331,15 @@ export class TicketExecutionService {
       relations: ['skillDefinition'],
     });
 
+    // Flatten all previous step outputs into top level so skills can read
+    // fields like rawText, tipologyId, normalizedText directly from input.
+    const stepOutputsFlat: Record<string, unknown> = {};
+    for (const out of Object.values((execution.metadata as any)?.stepOutputs ?? {})) {
+      Object.assign(stepOutputsFlat, out);
+    }
     const skillInput: Record<string, unknown> = {
       ...(execution.metadata as Record<string, unknown>),
+      ...stepOutputsFlat,
       ...(operatorInput ?? {}),
     };
 
@@ -448,8 +536,13 @@ export class TicketExecutionService {
       relations: ['skillDefinition'],
     });
 
+    const stepOutputsFlat2: Record<string, unknown> = {};
+    for (const out of Object.values((execution.metadata as any)?.stepOutputs ?? {})) {
+      Object.assign(stepOutputsFlat2, out);
+    }
     const skillInput: Record<string, unknown> = {
       ...(execution.metadata as Record<string, unknown>),
+      ...stepOutputsFlat2,
     };
 
     const startedAt = new Date();

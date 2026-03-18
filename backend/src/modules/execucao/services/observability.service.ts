@@ -98,7 +98,7 @@ export class ObservabilityService {
   > {
     return this.dataSource.query(`
       SELECT t.key AS tipology_key,
-             t.name AS tipology_name,
+             t.label AS tipology_name,
              ROUND(AVG((a.content->>'complianceScore')::float)::numeric, 2) AS avg_compliance_score,
              COUNT(a.id) AS evaluated_count
       FROM artifact a
@@ -108,7 +108,7 @@ export class ObservabilityService {
       INNER JOIN tipology t ON c."tipologyId" = t.id
       WHERE a."artifactType" = 'compliance_evaluation'
         AND (a.content->>'complianceScore') IS NOT NULL
-      GROUP BY t.key, t.name
+      GROUP BY t.key, t.label
       ORDER BY avg_compliance_score DESC
     `);
   }

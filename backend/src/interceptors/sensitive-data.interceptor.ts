@@ -11,6 +11,7 @@ function redactSensitive(data: unknown): unknown {
       .replace(CPF_REGEX, '***.***.***-**')
       .replace(PHONE_REGEX, '(**) *****-****');
   }
+  if (data instanceof Date) return data.toISOString();
   if (Array.isArray(data)) return data.map(redactSensitive);
   if (data !== null && typeof data === 'object') {
     return Object.fromEntries(
