@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 7 of 7 (Polish & Compliance) — In progress
-Plan: 1 of 4 in phase 07 — 07-01 DONE (memory services wired into DraftFinalResponse + HumanReviewService)
-Status: 07-02 (AdminConfigController) was also pre-committed in prior session — pending verification
-Last activity: 2026-03-18 — Completed 07-01-PLAN.md (MemoryRetrievalService, MemoryFeedbackService, PromptContext memory fields, DraftFinalResponse memory retrieval, HumanReview feedback persistence)
+Plan: 2 of 4 in phase 07 — 07-02 DONE (AdminConfigController + 5 admin page groups)
+Status: In progress — 2/4 plans done in phase 07
+Last activity: 2026-03-18 — Completed 07-02-PLAN.md (AdminConfigController 12 endpoints, personas/templates/skills/capabilities/models admin UI, forwardRef circular dep fix)
 
 Progress: [█████████░] 91% (21/23 plans)
 
@@ -157,10 +157,11 @@ None.
 - **07-01:** forwardRef(() => IaModule) in MemoriaModule breaks circular: MemoriaModule -> IaModule -> BaseDeConhecimentoModule -> MemoriaModule
 - **07-01:** Memory context injected into DraftGeneratorAgent input map before generate() call — agent reads from input, adds to PromptContext
 - **07-01 DONE:** MemoryRetrievalService (findSimilarCases, findSimilarCorrections, findStylePatterns) + MemoryFeedbackService (persistFeedback with pgvector.toSql) wired. PromptContext extended with memory fields. DraftFinalResponse skill retrieves memory context before generating draft. HumanReviewService persists feedback after review save. VPS build clean. Note: StyleMemory uses expressionText (text) not style.expression (jsonb) — adapted.
-- **07-02 pre-committed:** AdminConfigController + AdminConfigService committed as 0bdb2c8 in prior session. STATUS.md needs refresh before executing 07-03.
+- **07-02 COMPLETE:** AdminConfigController (12 endpoints @Roles(ADMIN)), AdminConfigService (CRUD + StyleMemory sync), 5 admin page groups (/admin/personas, /admin/templates, /admin/skills, /admin/capabilities, /admin/models). forwardRef fix: IaModule uses forwardRef(() => BaseDeConhecimentoModule) to break IaModule->BDCM->MemoriaModule->forwardRef(IaModule) circle. 4 seeded personas confirmed. Frontend builds clean. 403 on non-admin confirmed.
+- **07-02 key decisions:** GET /api/admin/capability-versions (not capabilities) to avoid StepsDesignerController conflict; PORT env var in main.ts; StyleMemory sync is non-fatal try/catch.
 
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Completed 07-01-PLAN.md — memory services (MemoryRetrievalService, MemoryFeedbackService) wired into DraftFinalResponse skill and HumanReviewService; VPS build clean
+Stopped at: Completed 07-02-PLAN.md — AdminConfigController + 5 admin page groups, forwardRef circular dep fix, VPS build + runtime verified
 Resume file: None
