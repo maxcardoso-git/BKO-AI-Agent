@@ -35,25 +35,25 @@
 
 ### Regulatory Orchestration
 
-- [ ] **ORCH-01**: Sistema calcula SLA automaticamente (10 dias aberta, 3 dias pedidos, 5 dias reaberta)
-- [ ] **ORCH-02**: Sistema classifica tipologia e subtipologia com apoio de regras e IA
-- [ ] **ORCH-03**: Sistema resolve situacao operacional (aberta, reaberta, vencida, em risco, pendente)
-- [ ] **ORCH-04**: Sistema decide acao regulatoria (responder, reclassificar, reencaminhar, cancelar)
-- [ ] **ORCH-05**: Sistema seleciona capability correta por tipologia + situacao
-- [ ] **ORCH-06**: Policy Validator verifica aderencia as regras do Manual antes de cada avanco
-- [ ] **ORCH-07**: Regras de reclassificacao, reencaminhamento e cancelamento seguem Manual Anatel
-- [ ] **ORCH-08**: Tratamento distinto para reclamacoes abertas vs reabertas vs pedidos regulatorios
+- [x] **ORCH-01**: Sistema calcula SLA automaticamente (10 dias aberta, 3 dias pedidos, 5 dias reaberta)
+- [x] **ORCH-02**: Sistema classifica tipologia e subtipologia com apoio de regras e IA
+- [x] **ORCH-03**: Sistema resolve situacao operacional (aberta, reaberta, vencida, em risco, pendente)
+- [x] **ORCH-04**: Sistema decide acao regulatoria (responder, reclassificar, reencaminhar, cancelar)
+- [x] **ORCH-05**: Sistema seleciona capability correta por tipologia + situacao
+- [x] **ORCH-06**: Policy Validator verifica aderencia as regras do Manual antes de cada avanco
+- [x] **ORCH-07**: Regras de reclassificacao, reencaminhamento e cancelamento seguem Manual Anatel
+- [x] **ORCH-08**: Tratamento distinto para reclamacoes abertas vs reabertas vs pedidos regulatorios
 
 ### MCP Server / Capability Runtime
 
-- [ ] **MCP-01**: Registry de capabilities com versionamento
-- [ ] **MCP-02**: Step Engine interpreta fluxo e controla sequencia de etapas
-- [ ] **MCP-03**: Skill Router resolve qual skill executar em cada step
-- [ ] **MCP-04**: Execution Context Manager mantem contexto entre etapas
-- [ ] **MCP-05**: Artifact Store persiste output de cada step
-- [ ] **MCP-06**: Retry Manager permite reprocessar etapa individual
-- [ ] **MCP-07**: Execution Logger registra execucao tecnica completa
-- [ ] **MCP-08**: Operador pode avancar manualmente pelas etapas (step-by-step)
+- [x] **MCP-01**: Registry de capabilities com versionamento
+- [x] **MCP-02**: Step Engine interpreta fluxo e controla sequencia de etapas
+- [x] **MCP-03**: Skill Router resolve qual skill executar em cada step
+- [x] **MCP-04**: Execution Context Manager mantem contexto entre etapas
+- [x] **MCP-05**: Artifact Store persiste output de cada step
+- [x] **MCP-06**: Retry Manager permite reprocessar etapa individual
+- [x] **MCP-07**: Execution Logger registra execucao tecnica completa
+- [x] **MCP-08**: Operador pode avancar manualmente pelas etapas (step-by-step)
 
 ### Step Processor UI
 
@@ -241,22 +241,22 @@
 | TICK-04 | Phase 2 | Pending |
 | TICK-05 | Phase 2 | Pending |
 | TICK-06 | Phase 2 | Pending |
-| ORCH-01 | Phase 3 | Pending |
-| ORCH-02 | Phase 3 | Pending |
-| ORCH-03 | Phase 3 | Pending |
-| ORCH-04 | Phase 3 | Pending |
-| ORCH-05 | Phase 3 | Pending |
-| ORCH-06 | Phase 3 | Pending |
-| ORCH-07 | Phase 3 | Pending |
-| ORCH-08 | Phase 3 | Pending |
-| MCP-01 | Phase 3 | Pending |
-| MCP-02 | Phase 3 | Pending |
-| MCP-03 | Phase 3 | Pending |
-| MCP-04 | Phase 3 | Pending |
-| MCP-05 | Phase 3 | Pending |
-| MCP-06 | Phase 3 | Pending |
-| MCP-07 | Phase 3 | Pending |
-| MCP-08 | Phase 3 | Pending |
+| ORCH-01 | Phase 3 | Complete |
+| ORCH-02 | Phase 3 | Complete |
+| ORCH-03 | Phase 3 | Complete |
+| ORCH-04 | Phase 3 | Complete |
+| ORCH-05 | Phase 3 | Complete |
+| ORCH-06 | Phase 3 | Complete |
+| ORCH-07 | Phase 3 | Complete |
+| ORCH-08 | Phase 3 | Complete |
+| MCP-01 | Phase 3 | Complete |
+| MCP-02 | Phase 3 | Complete |
+| MCP-03 | Phase 3 | Complete |
+| MCP-04 | Phase 3 | Complete |
+| MCP-05 | Phase 3 | Complete |
+| MCP-06 | Phase 3 | Complete |
+| MCP-07 | Phase 3 | Complete |
+| MCP-08 | Phase 3 | Complete |
 | AI-01 | Phase 4 | Pending |
 | AI-02 | Phase 4 | Pending |
 | AI-03 | Phase 4 | Pending |
