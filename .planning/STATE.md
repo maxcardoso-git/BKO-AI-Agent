@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 5 of 7 (Skills Pipeline) — In progress
-Plan: 1 of 3 in phase 05 (05-01 complete)
-Status: In progress — 05-01 done, 05-02 and 05-03 pending
-Last activity: 2026-03-17 — Completed 05-01-PLAN.md (SkillRegistryService + Wave 1 skills + PersonaSeeder)
+Plan: 2 of 3 in phase 05 (05-01 and 05-02 complete)
+Status: In progress — 05-01 and 05-02 done, 05-03 pending
+Last activity: 2026-03-17 — Completed 05-02-PLAN.md (ApplyPersonaTone real implementation — all 14 SKLL-01..14 skills operational)
 
-Progress: [████████░░] 63% (14/22 plans)
+Progress: [████████░░] 68% (15/22 plans)
 
 ## Performance Metrics
 
@@ -107,6 +107,7 @@ Recent decisions affecting current work:
 - 05-01: complaintId passed as explicit 4th parameter to SkillRegistryService.execute() — never derived from input metadata to avoid stale-data artifact FKs
 - 05-01: MemoriaModule imported into ExecucaoModule to enable CaseMemory + HumanFeedbackMemory repos in SkillRegistryService constructor (Wave 3 readiness)
 - 05-01: DetermineRegulatoryAction uses 'classificacao' functionalityType (light model) + generateObject with Zod schema for cost-efficient structured regulatory action classification
+- 05-02: applyPersonaTone is rule-based (no LLM) — forbiddenExpressions stripped via regex, requiredExpressions conditionally appended; graceful no-op returns personaApplied:false when no tipologyId or no active persona found
 
 ### Pending Todos
 
@@ -128,9 +129,10 @@ None.
 - **04-02 done:** IaModule live with ModelSelectorService (DB-driven multi-model routing + callWithFallback), PromptBuilderService (3 context-rich prompt builders), ComplaintParsingAgent (generateObject + Zod), DraftGeneratorAgent (generateText). Ready for 04-03 real skill dispatch.
 - **04-03 done:** ComplianceEvaluatorAgent + FinalResponseComposerAgent + TokenUsageTrackerService live. KbManagerController (POST /api/kb/upload, GET /api/kb/documents). TicketExecutionService.executeSkillStub replaced by async executeSkill routing 6 skills to real AI agents + token tracking. ExecucaoModule->IaModule wired, no circular deps. Ready for 04-04 (phase completion).
 - **05-01 done:** SkillRegistryService live as central skill dispatcher (all 19 skills). Wave 1 skills implemented: LoadComplaint (ART-01), NormalizeComplaintText (ART-02), ComputeSla (ART-03), DetermineRegulatoryAction (ART-04 + generateObject + Zod), ValidateReclassification, ValidateReencaminhamento, ValidateCancelamento. AI skills from Phase 4 moved to SkillRegistryService with artifact persistence. TicketExecutionService is now a thin delegation wrapper. MemoriaModule wired into ExecucaoModule. PersonaSeeder creates 4 personas (one per tipology). Ready for 05-02 Wave 2 skills.
+- **05-02 done:** ApplyPersonaTone real implementation replaces stub. Loads Persona by tipologyId+isActive from personaRepo, strips forbiddenExpressions via case-insensitive regex, appends requiredExpressions if absent, graceful no-op fallback. All 14 SKLL-01..14 skills now fully operational (no stubs in waves 1 and 2). Ready for 05-03 Wave 3 skills (HumanDiffCapture, PersistMemory, TrackTokenUsage, AuditTrail).
 
 ## Session Continuity
 
 Last session: 2026-03-17
-Stopped at: Completed 05-01-PLAN.md — SkillRegistryService + Wave 1 skills + MemoriaModule wiring + PersonaSeeder
+Stopped at: Completed 05-02-PLAN.md — ApplyPersonaTone real implementation (all 14 SKLL-01..14 skills operational)
 Resume file: None
