@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 6 of 7 (Human Review Pipeline) — In progress
-Plan: 1 of 3 in phase 06 (06-01 complete)
-Status: In progress — 06-01 backend BFF done; 06-02 and 06-03 (frontend) remaining
-Last activity: 2026-03-18 — Completed 06-01-PLAN.md (HumanReviewController, HitlPolicyService, StepsDesignerController, AI SDK v6 fixes)
+Plan: 2 of 3 in phase 06 (06-01, 06-02 complete)
+Status: In progress — 06-01 backend BFF done; 06-02 step processor UI done; 06-03 (HITL editor + admin) remaining
+Last activity: 2026-03-18 — Completed 06-02-PLAN.md (StepProcessor 4-column page, advanceStep/retryStep actions, shadcn installs, VPS build clean)
 
-Progress: [█████████░] 77% (17/22 plans)
+Progress: [█████████░] 82% (18/22 plans)
 
 ## Performance Metrics
 
@@ -121,6 +121,9 @@ Recent decisions affecting current work:
 - 06-01: tsconfig.build.json must exclude scripts/ — NestJS nest build uses tsconfig.build.json, not tsconfig.json
 - 06-01: AI SDK v6 renamed maxTokens to maxOutputTokens in generateObject/generateText (affects 5 service files)
 - 06-01: EmbeddingModel<string> in ai SDK v6 is non-generic — use EmbeddingModel without type parameter
+- 06-02: ActionState = { error?: string; success?: boolean } — React 19 useActionState requires state generic S to match _prev parameter and be assignable from {} initial state; discriminated unions break with .bind() pattern
+- 06-02: Server action type exported from actions.ts and imported by client component — single source of truth for useActionState generic parameter
+- 06-02: currentArtifact filters artifacts by currentStepExec.id first, falls back to artifacts.at(-1) — STEP-02 compliant artifact display
 
 ### Pending Todos
 
@@ -144,9 +147,10 @@ None.
 - **SKLL-20 (execution record):** Satisfied by StepExecution row persistence in TicketExecutionService.advanceStep() — no separate skill needed.
 - **HumanDiffCapture scaffold ready for Phase 6:** human_diff artifact created with `humanFinal: null`; Phase 6 HITL will populate humanFinal when operator approves/edits the AI draft.
 - **06-01 COMPLETE:** HumanReviewController (POST/GET /api/executions/:execId/steps/:stepExecId/review), HitlPolicyService (risk-aware HITL gate), StepsDesignerController (5 admin endpoints). VPS build passes clean. Plans 06-02 and 06-03 can be built against this stable backend API.
+- **06-02 COMPLETE:** StepProcessor 4-column page at /tickets/[id]/execution/[execId]. advanceStep/retryStep/startExecution server actions with typed ActionState. HITL editor link appears when paused_human. VPS build clean with zero TS errors. Pre-placed 06-03 files (hitl-editor, steps-designer) also build clean after installing react-diff-viewer-continued and shadcn tabs/textarea/checkbox.
 
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Completed 06-01-PLAN.md — Phase 6 backend BFF complete (HumanReview + HitlPolicy + StepsDesigner), AI SDK v6 breaking changes fixed, VPS build passes
+Stopped at: Completed 06-02-PLAN.md — StepProcessor 4-column page, advanceStep/retryStep actions, HITL link, VPS build passes clean
 Resume file: None
