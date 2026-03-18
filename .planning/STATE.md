@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 5 of 7 (Skills Pipeline) — COMPLETE
-Plan: 3 of 3 in phase 05 (all complete)
-Status: Phase 5 COMPLETE — all 3 plans done, all 19 skills operational
-Last activity: 2026-03-18 — Completed 05-03-PLAN.md (Wave 3 skills: HumanDiffCapture, PersistMemory, TrackTokenUsage, AuditTrail — zero stubs remain)
+Phase: 6 of 7 (Human Review Pipeline) — In progress
+Plan: 1 of 3 in phase 06 (06-01 complete)
+Status: In progress — 06-01 backend BFF done; 06-02 and 06-03 (frontend) remaining
+Last activity: 2026-03-18 — Completed 06-01-PLAN.md (HumanReviewController, HitlPolicyService, StepsDesignerController, AI SDK v6 fixes)
 
-Progress: [█████████░] 73% (16/22 plans)
+Progress: [█████████░] 77% (17/22 plans)
 
 ## Performance Metrics
 
@@ -32,6 +32,7 @@ Progress: [█████████░] 73% (16/22 plans)
 | 03-orchestration-engine | 3/3 DONE | ~18 min | ~6 min |
 | 04-intelligence-layer | 4/4 DONE | ~32 min | ~8 min |
 | 05-skills-pipeline | 3/3 DONE | ~7 min | ~2 min |
+| 06-human-review-pipeline | 1/3 | 13 min | 13 min |
 
 **Recent Trend:**
 - Last 5 plans: 2 min, 4 min, 18 min, 2 min, 4 min
@@ -113,6 +114,13 @@ Recent decisions affecting current work:
 - 05-03: PersistMemory uses raw INSERT with pgvector.toSql() — caseMemoryRepo.create() used only to build object fields, actual insert bypasses TypeORM ORM layer for vector column
 - 05-03: TrackTokenUsage aggregates via JOIN step_execution ON ticketExecutionId — does NOT call tokenUsageTracker.track() since per-call tracking already happened in each AI skill
 - 05-03: embed() from 'ai' SDK chosen for PersistMemory — consistent with VectorSearchService pattern, uses ModelSelectorService.getEmbeddingModel() for centralized model config
+- 06-01: HitlPolicyService in same file as HumanReviewService — avoids circular dep; both exported from human-review.service.ts
+- 06-01: skillKey/llmModel NOT added to StepDefinition entity (no migration) — handled via StepSkillBinding upsert in updateSteps() transaction
+- 06-01: TransitionRuleDto uses actual entity fields (conditionType/conditionExpression/targetStepKey) not plan-spec fields (condition/targetStepOrder)
+- 06-01: pdf-parse pinned to 1.1.1 — v2.4.5 has incompatible class-based API; document-ingestion.service uses pdfMod.default ?? pdfMod fallback
+- 06-01: tsconfig.build.json must exclude scripts/ — NestJS nest build uses tsconfig.build.json, not tsconfig.json
+- 06-01: AI SDK v6 renamed maxTokens to maxOutputTokens in generateObject/generateText (affects 5 service files)
+- 06-01: EmbeddingModel<string> in ai SDK v6 is non-generic — use EmbeddingModel without type parameter
 
 ### Pending Todos
 
@@ -135,9 +143,10 @@ None.
 - **Phase 5 COMPLETE:** All 3 plans done. All 19 skills (SKLL-01..SKLL-19) have real implementations — zero stubs remain. Full pipeline from LoadComplaint through AuditTrail is operational. Complaint processed end-to-end: 11 artifact types (ART-01..ART-11) produced, CaseMemory with pgvector embeddings persisted, token usage aggregated, append-only audit log created.
 - **SKLL-20 (execution record):** Satisfied by StepExecution row persistence in TicketExecutionService.advanceStep() — no separate skill needed.
 - **HumanDiffCapture scaffold ready for Phase 6:** human_diff artifact created with `humanFinal: null`; Phase 6 HITL will populate humanFinal when operator approves/edits the AI draft.
+- **06-01 COMPLETE:** HumanReviewController (POST/GET /api/executions/:execId/steps/:stepExecId/review), HitlPolicyService (risk-aware HITL gate), StepsDesignerController (5 admin endpoints). VPS build passes clean. Plans 06-02 and 06-03 can be built against this stable backend API.
 
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Completed 05-03-PLAN.md — Wave 3 skills complete, Phase 5 COMPLETE, all 19 skills operational
+Stopped at: Completed 06-01-PLAN.md — Phase 6 backend BFF complete (HumanReview + HitlPolicy + StepsDesigner), AI SDK v6 breaking changes fixed, VPS build passes
 Resume file: None
