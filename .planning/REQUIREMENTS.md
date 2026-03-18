@@ -99,16 +99,16 @@
 
 ### AI Service
 
-- [ ] **AI-01**: Prompt Builder monta contexto por etapa (ticket, regras, template IQI, persona, memoria, checklist)
-- [ ] **AI-02**: Model Selector configuravel — pagina de cadastro de modelos por tipo de funcionalidade
-- [ ] **AI-03**: Estrategia multi-modelo (menor para classificacao, maior para composicao)
-- [ ] **AI-04**: Fallback configuravel entre modelos
-- [ ] **AI-05**: Complaint Parsing Agent extrai dados estruturados da reclamacao
-- [ ] **AI-06**: Draft Generator gera rascunho e artefatos intermediarios
-- [ ] **AI-07**: Compliance Evaluator avalia aderencia regulatoria e completude
-- [ ] **AI-08**: Final Response Composer consolida resposta final
-- [ ] **AI-09**: Token Usage Tracker captura consumo e custo por chamada
-- [ ] **AI-10**: Politica de temperatura por etapa
+- [x] **AI-01**: Prompt Builder monta contexto por etapa (ticket, regras, template IQI, persona, memoria, checklist)
+- [x] **AI-02**: Model Selector configuravel — pagina de cadastro de modelos por tipo de funcionalidade
+- [x] **AI-03**: Estrategia multi-modelo (menor para classificacao, maior para composicao)
+- [x] **AI-04**: Fallback configuravel entre modelos
+- [x] **AI-05**: Complaint Parsing Agent extrai dados estruturados da reclamacao
+- [x] **AI-06**: Draft Generator gera rascunho e artefatos intermediarios
+- [x] **AI-07**: Compliance Evaluator avalia aderencia regulatoria e completude
+- [x] **AI-08**: Final Response Composer consolida resposta final
+- [x] **AI-09**: Token Usage Tracker captura consumo e custo por chamada
+- [x] **AI-10**: Politica de temperatura por etapa
 
 ### Human-in-the-Loop (HITL)
 
@@ -122,14 +122,14 @@
 
 ### Knowledge Base
 
-- [ ] **KB-01**: Ingestao do Manual Anatel (chunking + indexacao)
-- [ ] **KB-02**: Ingestao do Guia IQI por tipologia
-- [ ] **KB-03**: Busca vetorial para contexto textual (pgvector)
-- [ ] **KB-04**: Busca estruturada para regras e templates (SQL)
-- [ ] **KB-05**: Template Resolver por tipologia/situacao/desfecho
-- [ ] **KB-06**: Mandatory Info Resolver (itens obrigatorios por caso)
-- [ ] **KB-07**: Versionamento documental (documentos podem mudar ao longo do tempo)
-- [ ] **KB-08**: KB Manager no frontend (upload, versioning)
+- [x] **KB-01**: Ingestao do Manual Anatel (chunking + indexacao)
+- [x] **KB-02**: Ingestao do Guia IQI por tipologia
+- [x] **KB-03**: Busca vetorial para contexto textual (pgvector)
+- [x] **KB-04**: Busca estruturada para regras e templates (SQL)
+- [x] **KB-05**: Template Resolver por tipologia/situacao/desfecho
+- [x] **KB-06**: Mandatory Info Resolver (itens obrigatorios por caso)
+- [x] **KB-07**: Versionamento documental (documentos podem mudar ao longo do tempo)
+- [x] **KB-08**: KB Manager no frontend (upload, versioning)
 
 ### Memory & Learning
 
@@ -257,24 +257,24 @@
 | MCP-06 | Phase 3 | Complete |
 | MCP-07 | Phase 3 | Complete |
 | MCP-08 | Phase 3 | Complete |
-| AI-01 | Phase 4 | Pending |
-| AI-02 | Phase 4 | Pending |
-| AI-03 | Phase 4 | Pending |
-| AI-04 | Phase 4 | Pending |
-| AI-05 | Phase 4 | Pending |
-| AI-06 | Phase 4 | Pending |
-| AI-07 | Phase 4 | Pending |
-| AI-08 | Phase 4 | Pending |
-| AI-09 | Phase 4 | Pending |
-| AI-10 | Phase 4 | Pending |
-| KB-01 | Phase 4 | Pending |
-| KB-02 | Phase 4 | Pending |
-| KB-03 | Phase 4 | Pending |
-| KB-04 | Phase 4 | Pending |
-| KB-05 | Phase 4 | Pending |
-| KB-06 | Phase 4 | Pending |
-| KB-07 | Phase 4 | Pending |
-| KB-08 | Phase 4 | Pending |
+| AI-01 | Phase 4 | Complete |
+| AI-02 | Phase 4 | Complete |
+| AI-03 | Phase 4 | Complete |
+| AI-04 | Phase 4 | Complete |
+| AI-05 | Phase 4 | Complete |
+| AI-06 | Phase 4 | Complete |
+| AI-07 | Phase 4 | Complete |
+| AI-08 | Phase 4 | Complete |
+| AI-09 | Phase 4 | Complete |
+| AI-10 | Phase 4 | Complete |
+| KB-01 | Phase 4 | Complete |
+| KB-02 | Phase 4 | Complete |
+| KB-03 | Phase 4 | Complete |
+| KB-04 | Phase 4 | Complete |
+| KB-05 | Phase 4 | Complete |
+| KB-06 | Phase 4 | Complete |
+| KB-07 | Phase 4 | Complete |
+| KB-08 | Phase 4 | Complete |
 | SKLL-01 | Phase 5 | Pending |
 | SKLL-02 | Phase 5 | Pending |
 | SKLL-03 | Phase 5 | Pending |
