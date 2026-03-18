@@ -17,9 +17,11 @@ import { ExecutionService } from './services/execution.service';
 import { TicketExecutionService } from './services/ticket-execution.service';
 import { SkillRegistryService } from './services/skill-registry.service';
 import { HumanReviewService, HitlPolicyService } from './services/human-review.service';
+import { ObservabilityService } from './services/observability.service';
 import { ExecutionController } from './controllers/execution.controller';
 import { TicketExecutionController } from './controllers/ticket-execution.controller';
 import { HumanReviewController } from './controllers/human-review.controller';
+import { ObservabilityController } from './controllers/observability.controller';
 
 @Module({
   imports: [
@@ -39,8 +41,8 @@ import { HumanReviewController } from './controllers/human-review.controller';
     BaseDeConhecimentoModule,  // provides VectorSearchService, TemplateResolverService, MandatoryInfoResolverService
     RegulatorioModule,         // provides Persona repo for ApplyPersonaTone skill
   ],
-  controllers: [ExecutionController, TicketExecutionController, HumanReviewController],
-  providers: [ExecutionService, TicketExecutionService, SkillRegistryService, HumanReviewService, HitlPolicyService],
+  controllers: [ExecutionController, TicketExecutionController, HumanReviewController, ObservabilityController],
+  providers: [ExecutionService, TicketExecutionService, SkillRegistryService, HumanReviewService, HitlPolicyService, ObservabilityService],
   exports: [TypeOrmModule, ExecutionService, TicketExecutionService, SkillRegistryService, HumanReviewService, HitlPolicyService],
 })
 export class ExecucaoModule {}
