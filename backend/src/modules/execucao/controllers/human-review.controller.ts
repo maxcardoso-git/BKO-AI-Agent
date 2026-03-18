@@ -7,11 +7,14 @@ import {
   Request,
   HttpException,
   HttpCode,
+  UseInterceptors,
 } from '@nestjs/common';
 import { HumanReviewService } from '../services/human-review.service';
 import { SubmitReviewDto } from '../dto/submit-review.dto';
 import { HumanReview } from '../entities/human-review.entity';
+import { SensitiveDataInterceptor } from '../../../interceptors/sensitive-data.interceptor';
 
+@UseInterceptors(SensitiveDataInterceptor)
 @Controller()
 export class HumanReviewController {
   constructor(private readonly humanReviewService: HumanReviewService) {}

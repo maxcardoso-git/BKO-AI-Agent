@@ -6,12 +6,15 @@ import {
   ParseUUIDPipe,
   UsePipes,
   ValidationPipe,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ComplaintService } from '../services/complaint.service';
 import { ComplaintFilterDto } from '../dto/complaint-filter.dto';
 import { ComplaintListResponse } from '../dto/complaint-list-response.dto';
 import { Complaint } from '../entities/complaint.entity';
+import { SensitiveDataInterceptor } from '../../../interceptors/sensitive-data.interceptor';
 
+@UseInterceptors(SensitiveDataInterceptor)
 @Controller('complaints')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
 export class ComplaintController {

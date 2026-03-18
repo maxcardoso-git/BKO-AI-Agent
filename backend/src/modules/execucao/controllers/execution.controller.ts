@@ -1,9 +1,11 @@
-import { Controller, Get, Param, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, UseInterceptors } from '@nestjs/common';
 import { ExecutionService } from '../services/execution.service';
 import { TicketExecution } from '../entities/ticket-execution.entity';
 import { Artifact } from '../entities/artifact.entity';
 import { AuditLog } from '../entities/audit-log.entity';
+import { SensitiveDataInterceptor } from '../../../interceptors/sensitive-data.interceptor';
 
+@UseInterceptors(SensitiveDataInterceptor)
 @Controller('complaints/:complaintId')
 export class ExecutionController {
   constructor(private readonly executionService: ExecutionService) {}
