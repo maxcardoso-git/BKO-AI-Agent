@@ -215,9 +215,9 @@ export class SkillRegistryService {
           return { ...result, artifactId: finalArtifact.id };
         }
 
-        // === Wave 2 stubs (implemented in 05-02) ===
+        // === Wave 2: Knowledge & Generation Skills ===
         case 'ApplyPersonaTone':
-          return { adjustedText: (input['draftText'] as string) ?? '', personaApplied: false };
+          return await this.applyPersonaTone(input, stepExecutionId, complaintId);
 
         // === Wave 3 stubs (implemented in 05-03) ===
         case 'HumanDiffCapture':
@@ -610,6 +610,64 @@ Situacao atual: ${situationKey ?? 'nao informada'}`;
       checklist,
       completionPercentage: 0,
       artifactId: artifact.id,
+    };
+  }
+
+  /**
+   * SKLL-13: Apply persona tone to draft text.
+   * Rule-based: loads Persona by tipologyId, enforces forbidden/required expressions.
+   * No LLM call — pure string manipulation.
+   */
+  private async applyPersonaTone(
+    input: Record<string, unknown>,
+    stepExecutionId: string,
+    complaintId: string,
+  ): Promise<Record<string, unknown>> {
+    const draftText = (input['draftText'] as string) ??
+      (input['draftResponse'] as string) ??
+      (input['adjustedText'] as string) ?? '';
+    const tipologyId = input['tipologyId'] as string | undefined;
+
+    // If no tipologyId, return unchanged
+    if (!tipologyId) {
+      return { adjustedText: draftText, personaApplied: false, reason: 'No tipologyId provided' };
+    }
+
+    // Load active persona for this tipology
+    const persona = await this.personaRepo.findOne({
+      where: { tipologyId, isActive: true },
+    });
+
+    // If no persona found, return draft unchanged
+    if (!persona) {
+      return { adjustedText: draftText, personaApplied: false, reason: 'No active persona for tipology' };
+    }
+
+    let adjustedText = draftText;
+
+    // Apply forbidden expressions (case-insensitive remove)
+    for (const expr of persona.forbiddenExpressions ?? []) {
+      adjustedText = adjustedText.replace(new RegExp(expr, 'gi'), '');
+    }
+
+    // Clean up any double spaces created by removal
+    adjustedText = adjustedText.replace(/\s{2,}/g, ' ').trim();
+
+    // Ensure required expressions are present (append if not found)
+    for (const expr of persona.requiredExpressions ?? []) {
+      if (!adjustedText.toLowerCase().includes(expr.toLowerCase())) {
+        adjustedText += `\n${expr}`;
+      }
+    }
+
+    return {
+      adjustedText,
+      personaApplied: true,
+      personaId: persona.id,
+      personaName: persona.name,
+      formalityLevel: persona.formalityLevel,
+      empathyLevel: persona.empathyLevel,
+      assertivenessLevel: persona.assertivenessLevel,
     };
   }
 }
