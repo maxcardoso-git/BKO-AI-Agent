@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrquestracaoModule } from '../orquestracao/orquestracao.module';
 import { OperacaoModule } from '../operacao/operacao.module';
 import { IaModule } from '../ia/ia.module';
+import { MemoriaModule } from '../memoria/memoria.module';
 import { TicketExecution } from './entities/ticket-execution.entity';
 import { StepExecution } from './entities/step-execution.entity';
 import { Artifact } from './entities/artifact.entity';
@@ -12,6 +13,7 @@ import { HumanReview } from './entities/human-review.entity';
 import { AuditLog } from './entities/audit-log.entity';
 import { ExecutionService } from './services/execution.service';
 import { TicketExecutionService } from './services/ticket-execution.service';
+import { SkillRegistryService } from './services/skill-registry.service';
 import { ExecutionController } from './controllers/execution.controller';
 import { TicketExecutionController } from './controllers/ticket-execution.controller';
 
@@ -28,10 +30,11 @@ import { TicketExecutionController } from './controllers/ticket-execution.contro
     ]),
     OrquestracaoModule,
     OperacaoModule,
-    IaModule,  // provides AI agents for real skill dispatch (Phase 4)
+    IaModule,        // provides AI agents for skill dispatch
+    MemoriaModule,   // provides CaseMemory + HumanFeedbackMemory repos for PersistMemory skill
   ],
   controllers: [ExecutionController, TicketExecutionController],
-  providers: [ExecutionService, TicketExecutionService],
-  exports: [TypeOrmModule, ExecutionService, TicketExecutionService],
+  providers: [ExecutionService, TicketExecutionService, SkillRegistryService],
+  exports: [TypeOrmModule, ExecutionService, TicketExecutionService, SkillRegistryService],
 })
 export class ExecucaoModule {}
