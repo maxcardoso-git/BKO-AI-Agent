@@ -12,6 +12,7 @@ import { AuditLog } from './entities/audit-log.entity';
 import { ExecutionService } from './services/execution.service';
 import { TicketExecutionService } from './services/ticket-execution.service';
 import { ExecutionController } from './controllers/execution.controller';
+import { TicketExecutionController } from './controllers/ticket-execution.controller';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import { ExecutionController } from './controllers/execution.controller';
     OrquestracaoModule,
     OperacaoModule,
   ],
-  controllers: [ExecutionController],
+  controllers: [ExecutionController, TicketExecutionController],
   providers: [ExecutionService, TicketExecutionService],
   exports: [TypeOrmModule, ExecutionService, TicketExecutionService],
 })
