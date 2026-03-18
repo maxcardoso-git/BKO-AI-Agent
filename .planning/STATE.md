@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 7 of 7 (Polish & Compliance) — In progress
-Plan: 2 of 4 in phase 07 — 07-02 DONE (AdminConfigController + 5 admin page groups)
-Status: In progress — 2/4 plans done in phase 07
-Last activity: 2026-03-18 — Completed 07-02-PLAN.md (AdminConfigController 12 endpoints, personas/templates/skills/capabilities/models admin UI, forwardRef circular dep fix)
+Plan: 3 of 4 in phase 07 — 07-03 DONE (ObservabilityService + 6-panel dashboard + Trace Explorer + ticket logs)
+Status: In progress — 3/4 plans done in phase 07
+Last activity: 2026-03-18 — Completed 07-03-PLAN.md (8-endpoint ObservabilityService, recharts/shadcn chart, dashboard+trace+logs pages)
 
-Progress: [█████████░] 91% (21/23 plans)
+Progress: [█████████░] 96% (22/23 plans)
 
 ## Performance Metrics
 
@@ -159,9 +159,14 @@ None.
 - **07-01 DONE:** MemoryRetrievalService (findSimilarCases, findSimilarCorrections, findStylePatterns) + MemoryFeedbackService (persistFeedback with pgvector.toSql) wired. PromptContext extended with memory fields. DraftFinalResponse skill retrieves memory context before generating draft. HumanReviewService persists feedback after review save. VPS build clean. Note: StyleMemory uses expressionText (text) not style.expression (jsonb) — adapted.
 - **07-02 COMPLETE:** AdminConfigController (12 endpoints @Roles(ADMIN)), AdminConfigService (CRUD + StyleMemory sync), 5 admin page groups (/admin/personas, /admin/templates, /admin/skills, /admin/capabilities, /admin/models). forwardRef fix: IaModule uses forwardRef(() => BaseDeConhecimentoModule) to break IaModule->BDCM->MemoriaModule->forwardRef(IaModule) circle. 4 seeded personas confirmed. Frontend builds clean. 403 on non-admin confirmed.
 - **07-02 key decisions:** GET /api/admin/capability-versions (not capabilities) to avoid StepsDesignerController conflict; PORT env var in main.ts; StyleMemory sync is non-fatal try/catch.
+- **07-03:** step_execution column is stepKey not skillKey — plan SQL had wrong column name
+- **07-03:** token_usage has no estimatedCostUsd or stepExecutionId — cost aggregation uses llm_call.costUsd
+- **07-03:** audit_log has no ticketExecutionId FK — getTicketLogs uses UNION entityType pattern
+- **07-03:** recharts --legacy-peer-deps + react-is override for React 19.2.3 compat
+- **07-03 DONE:** ObservabilityService (8 raw-SQL methods) + ObservabilityController (8 routes @Roles(ADMIN)) + recharts + shadcn chart + /admin/observability dashboard (6 panels) + trace explorer + ticket logs. VPS build clean. SEC-02 confirmed: ObservabilityController does NOT need SensitiveDataInterceptor.
 
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Completed 07-02-PLAN.md — AdminConfigController + 5 admin page groups, forwardRef circular dep fix, VPS build + runtime verified
+Stopped at: Completed 07-03-PLAN.md — ObservabilityService + dashboard + trace + ticket logs, VPS builds clean
 Resume file: None
