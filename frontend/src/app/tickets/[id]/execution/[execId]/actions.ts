@@ -2,7 +2,9 @@
 import { fetchAuthAPI } from '@/lib/api'
 import { revalidatePath } from 'next/cache'
 
-export async function startExecution(complaintId: string, _prev: unknown, _formData: FormData) {
+export type ActionState = { error?: string; success?: boolean }
+
+export async function startExecution(complaintId: string, _prev: ActionState, _formData: FormData): Promise<ActionState> {
   const res = await fetchAuthAPI(`/api/complaints/${complaintId}/executions`, {
     method: 'POST',
   })
@@ -14,7 +16,7 @@ export async function startExecution(complaintId: string, _prev: unknown, _formD
   return { success: true }
 }
 
-export async function advanceStep(execId: string, complaintId: string, _prev: unknown, _formData: FormData) {
+export async function advanceStep(execId: string, complaintId: string, _prev: ActionState, _formData: FormData): Promise<ActionState> {
   const res = await fetchAuthAPI(`/api/executions/${execId}/advance`, {
     method: 'POST',
     body: JSON.stringify({}),
@@ -27,7 +29,7 @@ export async function advanceStep(execId: string, complaintId: string, _prev: un
   return { success: true }
 }
 
-export async function retryStep(execId: string, complaintId: string, _prev: unknown, _formData: FormData) {
+export async function retryStep(execId: string, complaintId: string, _prev: ActionState, _formData: FormData): Promise<ActionState> {
   const res = await fetchAuthAPI(`/api/executions/${execId}/retry-step`, {
     method: 'POST',
     body: JSON.stringify({}),
