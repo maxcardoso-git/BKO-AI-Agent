@@ -101,3 +101,38 @@ export interface Artifact {
   content: unknown
   createdAt: string
 }
+
+export interface StepExecution {
+  id: string
+  stepKey: string
+  status: 'pending' | 'in_progress' | 'completed' | 'failed' | 'waiting_human'
+  input: Record<string, unknown> | null
+  output: Record<string, unknown> | null
+  error: string | null
+  duration: number | null
+  retryCount: number
+  startedAt: string | null
+  completedAt: string | null
+  createdAt: string
+}
+
+export interface ExecutionDetail {
+  id: string
+  complaintId: string
+  status: 'pending' | 'running' | 'completed' | 'failed' | 'paused_human'
+  currentStepKey: string | null
+  metadata: Record<string, unknown> | null
+  stepExecutions: StepExecution[]
+  startedAt: string | null
+  completedAt: string | null
+  createdAt: string
+}
+
+export interface ArtifactDetail {
+  id: string
+  artifactType: string
+  content: Record<string, unknown>
+  stepExecutionId: string | null
+  complaintId: string
+  createdAt: string
+}
