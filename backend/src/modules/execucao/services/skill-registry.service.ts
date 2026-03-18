@@ -112,6 +112,14 @@ export class SkillRegistryService {
               latencyMs: (result.latencyMs as number) ?? 0,
             });
           }
+          await this.artifactRepo.save(
+            this.artifactRepo.create({
+              complaintId,
+              stepExecutionId,
+              artifactType: 'typology_classification',
+              content: result,
+            }),
+          );
           return result;
         }
 

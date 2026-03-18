@@ -4,6 +4,8 @@ import { OrquestracaoModule } from '../orquestracao/orquestracao.module';
 import { OperacaoModule } from '../operacao/operacao.module';
 import { IaModule } from '../ia/ia.module';
 import { MemoriaModule } from '../memoria/memoria.module';
+import { BaseDeConhecimentoModule } from '../base-de-conhecimento/base-de-conhecimento.module';
+import { RegulatorioModule } from '../regulatorio/regulatorio.module';
 import { TicketExecution } from './entities/ticket-execution.entity';
 import { StepExecution } from './entities/step-execution.entity';
 import { Artifact } from './entities/artifact.entity';
@@ -30,8 +32,10 @@ import { TicketExecutionController } from './controllers/ticket-execution.contro
     ]),
     OrquestracaoModule,
     OperacaoModule,
-    IaModule,        // provides AI agents for skill dispatch
-    MemoriaModule,   // provides CaseMemory + HumanFeedbackMemory repos for PersistMemory skill
+    IaModule,                  // provides AI agents for skill dispatch
+    MemoriaModule,             // provides CaseMemory + HumanFeedbackMemory repos for PersistMemory skill
+    BaseDeConhecimentoModule,  // provides VectorSearchService, TemplateResolverService, MandatoryInfoResolverService
+    RegulatorioModule,         // provides Persona repo for ApplyPersonaTone skill
   ],
   controllers: [ExecutionController, TicketExecutionController],
   providers: [ExecutionService, TicketExecutionService, SkillRegistryService],
