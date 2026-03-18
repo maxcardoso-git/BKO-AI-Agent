@@ -110,16 +110,16 @@ export class AdminConfigService {
     try {
       for (const expr of requiredExpressions) {
         await this.dataSource.query(
-          `INSERT INTO style_memory ("id","tipologyId","expressionType","style","createdAt")
-           VALUES (gen_random_uuid(),$1,$2,$3,NOW())`,
-          [tipologyId, 'approved', JSON.stringify({ expression: expr })],
+          `INSERT INTO style_memory ("id","tipologyId","expressionType","expressionText","isActive","createdAt")
+           VALUES (gen_random_uuid(),$1,$2,$3,true,NOW())`,
+          [tipologyId, 'approved', expr],
         );
       }
       for (const expr of forbiddenExpressions) {
         await this.dataSource.query(
-          `INSERT INTO style_memory ("id","tipologyId","expressionType","style","createdAt")
-           VALUES (gen_random_uuid(),$1,$2,$3,NOW())`,
-          [tipologyId, 'forbidden', JSON.stringify({ expression: expr })],
+          `INSERT INTO style_memory ("id","tipologyId","expressionType","expressionText","isActive","createdAt")
+           VALUES (gen_random_uuid(),$1,$2,$3,true,NOW())`,
+          [tipologyId, 'forbidden', expr],
         );
       }
     } catch {
