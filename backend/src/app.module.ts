@@ -5,6 +5,7 @@ import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PgvectorBootstrapService } from './database/pgvector-bootstrap.service';
+import { EventsGateway } from './events.gateway';
 import { AuthModule } from './modules/auth/auth.module';
 import { BaseDeConhecimentoModule } from './modules/base-de-conhecimento/base-de-conhecimento.module';
 import { ExecucaoModule } from './modules/execucao/execucao.module';
@@ -55,6 +56,6 @@ import { RegulatorioModule } from './modules/regulatorio/regulatorio.module';
     BaseDeConhecimentoModule,
   ],
   controllers: [AppController],
-  providers: [AppService, PgvectorBootstrapService],
+  providers: [AppService, PgvectorBootstrapService, EventsGateway],
 })
 export class AppModule {}
