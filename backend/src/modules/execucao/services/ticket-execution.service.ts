@@ -10,6 +10,14 @@ import { Complaint, ComplaintStatus } from '../../operacao/entities/complaint.en
 import { Artifact } from '../entities/artifact.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { RegulatoryOrchestrationService } from '../../orquestracao/services/regulatory-orchestration.service';
+import { ComplaintParsingAgent } from '../../ia/services/complaint-parsing.agent';
+import { DraftGeneratorAgent } from '../../ia/services/draft-generator.agent';
+import { ComplianceEvaluatorAgent } from '../../ia/services/compliance-evaluator.agent';
+import { FinalResponseComposerAgent } from '../../ia/services/final-response-composer.agent';
+import { TokenUsageTrackerService } from '../../ia/services/token-usage-tracker.service';
+import { VectorSearchService } from '../../base-de-conhecimento/services/vector-search.service';
+import { TemplateResolverService } from '../../base-de-conhecimento/services/template-resolver.service';
+import { MandatoryInfoResolverService } from '../../base-de-conhecimento/services/mandatory-info-resolver.service';
 
 interface ExecutionContext {
   tipologyKey: string;
@@ -49,6 +57,16 @@ export class TicketExecutionService {
     private readonly auditLogRepo: Repository<AuditLog>,
 
     private readonly orchService: RegulatoryOrchestrationService,
+
+    // --- AI agents and KB services (added in Phase 4) ---
+    private readonly complaintParser: ComplaintParsingAgent,
+    private readonly draftGenerator: DraftGeneratorAgent,
+    private readonly complianceEvaluator: ComplianceEvaluatorAgent,
+    private readonly finalResponseComposer: FinalResponseComposerAgent,
+    private readonly tokenUsageTracker: TokenUsageTrackerService,
+    private readonly vectorSearch: VectorSearchService,
+    private readonly templateResolver: TemplateResolverService,
+    private readonly mandatoryInfoResolver: MandatoryInfoResolverService,
   ) {}
 
   /**
@@ -147,7 +165,7 @@ export class TicketExecutionService {
   }
 
   /**
-   * Advances the execution to the next step. Executes the current step's skill stub,
+   * Advances the execution to the next step. Executes the current step's skill,
    * writes a StepExecution record, and advances currentStepKey.
    * Pauses if isHumanRequired and no operatorInput provided.
    * Validates policy rules before executing; throws 422 if blocked.
@@ -232,7 +250,7 @@ export class TicketExecutionService {
       execution.status = TicketExecutionStatus.RUNNING;
     }
 
-    // 10. Execute the skill stub
+    // 10. Execute the skill
     const binding = await this.stepSkillBindingRepo.findOne({
       where: { stepDefinitionId: currentStep.id, isActive: true },
       relations: ['skillDefinition'],
@@ -244,27 +262,28 @@ export class TicketExecutionService {
     };
 
     const startedAt = new Date();
-    const output = binding
-      ? this.executeSkillStub(binding.skillDefinition.key, skillInput)
-      : { result: 'no_skill_bound' };
-    const completedAt = new Date();
-    const durationMs = completedAt.getTime() - startedAt.getTime();
-
-    // 11. Create StepExecution record
+    // 11. Create StepExecution record (saved before skill so we have stepExec.id for token tracking)
     const stepExec = this.stepExecutionRepo.create({
       ticketExecutionId: executionId,
       stepDefinitionId: currentStep.id,
       stepKey: currentStep.key,
       status: StepExecutionStatus.COMPLETED,
       startedAt,
-      completedAt,
-      durationMs,
       input: skillInput,
-      output,
       retryCount: 0,
     });
+    await this.stepExecutionRepo.save(stepExec);
 
-    // 12. Save stepExec
+    const output = binding
+      ? await this.executeSkill(binding.skillDefinition.key, skillInput, stepExec.id)
+      : { result: 'no_skill_bound' };
+    const completedAt = new Date();
+    const durationMs = completedAt.getTime() - startedAt.getTime();
+
+    // 12. Update StepExecution with output and timing
+    stepExec.output = output;
+    stepExec.completedAt = completedAt;
+    stepExec.durationMs = durationMs;
     await this.stepExecutionRepo.save(stepExec);
 
     // 13. Accumulate output in metadata
@@ -397,7 +416,7 @@ export class TicketExecutionService {
 
   /**
    * Retries a specific step within an execution. Increments retryCount on the existing
-   * StepExecution row, re-executes the skill stub, and restores RUNNING if was FAILED.
+   * StepExecution row, re-executes the skill, and restores RUNNING if was FAILED.
    */
   async retryStep(executionId: string, stepKey: string): Promise<StepExecution> {
     // 1. Load execution
@@ -441,7 +460,7 @@ export class TicketExecutionService {
 
     const startedAt = new Date();
     const newOutput = binding
-      ? this.executeSkillStub(binding.skillDefinition.key, skillInput)
+      ? await this.executeSkill(binding.skillDefinition.key, skillInput, stepExec.id)
       : { result: 'no_skill_bound' };
     const completedAt = new Date();
     const durationMs = completedAt.getTime() - startedAt.getTime();
@@ -487,65 +506,189 @@ export class TicketExecutionService {
   }
 
   /**
-   * Synchronous skill stub router. Returns minimal valid output for each of the 19 registered skills.
-   * Returns a no-op result for unknown skill keys — does NOT throw.
+   * Async skill dispatcher. Routes to real AI agents for AI-related skills,
+   * falls back to stub implementations for non-AI skills (data loading, validation, etc.).
+   * Phase 5 will replace remaining stubs with full implementations.
+   *
+   * @param stepExecutionId - Required for TokenUsageTrackerService.track() (llm_call.stepExecutionId FK is non-nullable)
    */
-  private executeSkillStub(
+  private async executeSkill(
     skillKey: string,
     input: Record<string, unknown>,
-  ): Record<string, unknown> {
-    const stubs: Record<string, (i: Record<string, unknown>) => Record<string, unknown>> = {
-      LoadComplaint: (i) => ({
-        complaint: { id: i['complaintId'], protocolNumber: i['protocolNumber'] ?? 'STUB' },
-      }),
-      NormalizeComplaintText: (i) => ({
-        normalizedText: (i['rawText'] as string) ?? 'normalized stub text',
-      }),
-      ClassifyTypology: (i) => ({
-        tipologyKey: (i['tipologyKey'] as string) ?? 'cobranca',
-        confidence: 1.0,
-      }),
-      ComputeSla: () => ({
-        slaDeadline: new Date().toISOString(),
-        slaBusinessDays: 10,
-        isOverdue: false,
-      }),
-      DetermineRegulatoryAction: () => ({
-        actionKey: 'responder',
-        justification: 'stub determination',
-      }),
-      RetrieveManualContext: () => ({ chunks: [] }),
-      RetrieveIQITemplate: () => ({
-        templateContent: '[stub template]',
-        templateName: 'stub',
-      }),
-      BuildMandatoryChecklist: () => ({
-        checklist: [],
-        completionPercentage: 100,
-      }),
-      GenerateArtifact: () => ({ artifactId: 'stub-artifact-id' }),
-      ApplyPersonaTone: (i) => ({
-        adjustedText: (i['draftText'] as string) ?? 'stub adjusted text',
-      }),
-      DraftFinalResponse: () => ({ draftResponse: '[stub response]', tokensUsed: 0 }),
-      ComplianceCheck: () => ({
-        isCompliant: true,
-        violations: [],
-        complianceScore: 1.0,
-      }),
-      HumanDiffCapture: () => ({ diffSummary: 'no diff', changesCount: 0 }),
-      PersistMemory: () => ({ memoryId: 'stub-memory-id' }),
-      TrackTokenUsage: () => ({ totalTokens: 0, estimatedCost: 0 }),
-      AuditTrail: () => ({ auditLogId: 'stub-audit-id' }),
-      ValidateReclassification: () => ({ isValid: true, errors: [] }),
-      ValidateReencaminhamento: () => ({ isValid: true, errors: [] }),
-      ValidateCancelamento: () => ({ isValid: true, errors: [] }),
-    };
+    stepExecutionId: string,
+  ): Promise<Record<string, unknown>> {
+    try {
+      switch (skillKey) {
+        // === AI-powered skills (real implementations) ===
+        case 'ClassifyTypology': {
+          const result = await this.complaintParser.classify(input);
+          // Track token usage for LLM call
+          if (result.usage) {
+            const usage = result.usage as { inputTokens: number; outputTokens: number };
+            await this.tokenUsageTracker.track({
+              stepExecutionId,
+              model: result.model as string,
+              provider: result.provider as string,
+              inputTokens: usage.inputTokens,
+              outputTokens: usage.outputTokens,
+              latencyMs: (result.latencyMs as number) ?? 0,
+            });
+          }
+          return result;
+        }
 
-    const stub = stubs[skillKey];
-    if (!stub) {
-      return { error: 'Unknown skill: ' + skillKey, result: 'no_op' };
+        case 'RetrieveManualContext': {
+          const query = (input['complaintText'] as string) ??
+            (input['normalizedText'] as string) ?? '';
+          const chunks = await this.vectorSearch.search(query, 5, 'manual_anatel');
+          return { chunks: chunks.map(c => ({ content: c.content, similarity: c.similarity })) };
+        }
+
+        case 'RetrieveIQITemplate': {
+          const tipologyId = input['tipologyId'] as string | undefined;
+          const situationId = input['situationId'] as string | null ?? null;
+          if (!tipologyId) {
+            return { templateContent: null, templateName: null, error: 'No tipologyId provided' };
+          }
+          const template = await this.templateResolver.resolve(tipologyId, situationId);
+          return {
+            templateContent: template?.templateContent ?? null,
+            templateName: template?.name ?? null,
+            templateId: template?.id ?? null,
+            matchType: template?.matchType ?? null,
+          };
+        }
+
+        case 'BuildMandatoryChecklist': {
+          const tipId = input['tipologyId'] as string | undefined;
+          const sitId = input['situationId'] as string | null ?? null;
+          if (!tipId) {
+            return { checklist: [], completionPercentage: 0, error: 'No tipologyId provided' };
+          }
+          const fields = await this.mandatoryInfoResolver.resolve(tipId, sitId);
+          return {
+            checklist: fields.map(f => ({
+              fieldName: f.fieldName,
+              fieldLabel: f.fieldLabel,
+              isRequired: f.isRequired,
+              isPresent: false, // will be checked by ComplianceCheck later
+            })),
+            completionPercentage: 0,
+          };
+        }
+
+        case 'DraftFinalResponse': {
+          const result = await this.draftGenerator.generate(input);
+          // Track token usage for LLM call
+          if (result.usage) {
+            const usage = result.usage as { inputTokens: number; outputTokens: number };
+            await this.tokenUsageTracker.track({
+              stepExecutionId,
+              model: result.model as string,
+              provider: result.provider as string,
+              inputTokens: usage.inputTokens,
+              outputTokens: usage.outputTokens,
+              latencyMs: (result.latencyMs as number) ?? 0,
+            });
+          }
+          return result;
+        }
+
+        case 'ComplianceCheck': {
+          const result = await this.complianceEvaluator.evaluate(input);
+          // Track token usage for LLM call
+          if (result.usage) {
+            const usage = result.usage as { inputTokens: number; outputTokens: number };
+            await this.tokenUsageTracker.track({
+              stepExecutionId,
+              model: result.model as string,
+              provider: result.provider as string,
+              inputTokens: usage.inputTokens,
+              outputTokens: usage.outputTokens,
+              latencyMs: (result.latencyMs as number) ?? 0,
+            });
+          }
+          return result;
+        }
+
+        case 'GenerateArtifact': {
+          const result = await this.finalResponseComposer.compose(input);
+          // Track token usage for LLM call (only if composer made an LLM call — skipped when no violations)
+          if (result.usage && result.model !== 'none') {
+            const usage = result.usage as { inputTokens: number; outputTokens: number };
+            await this.tokenUsageTracker.track({
+              stepExecutionId,
+              model: result.model as string,
+              provider: result.provider as string,
+              inputTokens: usage.inputTokens,
+              outputTokens: usage.outputTokens,
+              latencyMs: (result.latencyMs as number) ?? 0,
+            });
+          }
+          return result;
+        }
+
+        // === Stub skills (non-AI, will be implemented in Phase 5) ===
+        case 'LoadComplaint':
+          return {
+            complaint: { id: input['complaintId'], protocolNumber: input['protocolNumber'] ?? 'STUB' },
+          };
+
+        case 'NormalizeComplaintText':
+          return {
+            normalizedText: (input['rawText'] as string) ?? 'normalized stub text',
+          };
+
+        case 'ComputeSla':
+          return {
+            slaDeadline: new Date().toISOString(),
+            slaBusinessDays: 10,
+            isOverdue: false,
+          };
+
+        case 'DetermineRegulatoryAction':
+          return {
+            actionKey: 'responder',
+            justification: 'stub determination',
+          };
+
+        case 'ApplyPersonaTone':
+          return {
+            adjustedText: (input['draftText'] as string) ?? 'stub adjusted text',
+          };
+
+        case 'HumanDiffCapture':
+          return { diffSummary: 'no diff', changesCount: 0 };
+
+        case 'PersistMemory':
+          return { memoryId: 'stub-memory-id' };
+
+        case 'TrackTokenUsage':
+          return { totalTokens: 0, estimatedCost: 0 };
+
+        case 'AuditTrail':
+          return { auditLogId: 'stub-audit-id' };
+
+        case 'ValidateReclassification':
+          return { isValid: true, errors: [] };
+
+        case 'ValidateReencaminhamento':
+          return { isValid: true, errors: [] };
+
+        case 'ValidateCancelamento':
+          return { isValid: true, errors: [] };
+
+        default:
+          return { error: 'Unknown skill: ' + skillKey, result: 'no_op' };
+      }
+    } catch (error) {
+      // Log error but do NOT throw — return error payload so step execution records the failure
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+        error: errorMessage,
+        skillKey,
+        failedAt: new Date().toISOString(),
+      };
     }
-    return stub(input);
   }
 }

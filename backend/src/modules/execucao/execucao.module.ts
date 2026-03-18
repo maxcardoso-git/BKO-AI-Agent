@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { OrquestracaoModule } from '../orquestracao/orquestracao.module';
 import { OperacaoModule } from '../operacao/operacao.module';
+import { IaModule } from '../ia/ia.module';
 import { TicketExecution } from './entities/ticket-execution.entity';
 import { StepExecution } from './entities/step-execution.entity';
 import { Artifact } from './entities/artifact.entity';
@@ -27,6 +28,7 @@ import { TicketExecutionController } from './controllers/ticket-execution.contro
     ]),
     OrquestracaoModule,
     OperacaoModule,
+    IaModule,  // provides AI agents for real skill dispatch (Phase 4)
   ],
   controllers: [ExecutionController, TicketExecutionController],
   providers: [ExecutionService, TicketExecutionService],
