@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 6 of 7 (Human Review Pipeline) — COMPLETE
-Plan: 4 of 4 in phase 06 — ALL DONE (gap closure complete)
-Status: Phase 6 fully complete — schema mismatch fixed, transition save/load round-trip correct
-Last activity: 2026-03-18 — Completed 06-04-PLAN.md (gap closure: getTransitions/saveTransitions DTO mapping fix, TransitionsEditor step-key dropdown)
+Phase: 7 of 7 (Polish & Compliance) — In progress
+Plan: 1 of 4 in phase 07 — 07-01 DONE (memory services wired into DraftFinalResponse + HumanReviewService)
+Status: 07-02 (AdminConfigController) was also pre-committed in prior session — pending verification
+Last activity: 2026-03-18 — Completed 07-01-PLAN.md (MemoryRetrievalService, MemoryFeedbackService, PromptContext memory fields, DraftFinalResponse memory retrieval, HumanReview feedback persistence)
 
-Progress: [█████████░] 87% (20/23 plans)
+Progress: [█████████░] 91% (21/23 plans)
 
 ## Performance Metrics
 
@@ -153,9 +153,14 @@ None.
 - **06-02 COMPLETE:** StepProcessor 4-column page at /tickets/[id]/execution/[execId]. advanceStep/retryStep/startExecution server actions with typed ActionState. HITL editor link appears when paused_human. VPS build clean with zero TS errors. Pre-placed 06-03 files (hitl-editor, steps-designer) also build clean after installing react-diff-viewer-continued and shadcn tabs/textarea/checkbox.
 - **PHASE 6 COMPLETE (06-03 done):** HITL editor at /tickets/:id/execution/:execId/review/:stepExecId with 4-tab layout (AI text/Edit/Diff/Checklist). submitHumanReview POSTs review + advances with operatorInput. Admin steps designer at /admin/steps and /admin/steps/:capabilityId with skillKey/llmModel inputs, isHumanRequired toggle, step reorder, per-step TransitionsEditor (lazy-loaded via server action). VPS build passes clean. Ready for Phase 7 (Reporting Dashboard).
 - **06-04 gap closure done:** Frontend TransitionsEditor now correctly maps backend conditionType/conditionExpression/targetStepKey ↔ UI model. getTransitions reads backend fields; saveTransitions serializes to backend DTO shape. TransitionsEditor uses step-key dropdown instead of order number input. VPS tsc and npm run build clean.
+- **07-01:** StyleMemory.expressionText (text column) not style.expression (jsonb) — entity schema uses expressionText; plan spec assumed jsonb
+- **07-01:** forwardRef(() => IaModule) in MemoriaModule breaks circular: MemoriaModule -> IaModule -> BaseDeConhecimentoModule -> MemoriaModule
+- **07-01:** Memory context injected into DraftGeneratorAgent input map before generate() call — agent reads from input, adds to PromptContext
+- **07-01 DONE:** MemoryRetrievalService (findSimilarCases, findSimilarCorrections, findStylePatterns) + MemoryFeedbackService (persistFeedback with pgvector.toSql) wired. PromptContext extended with memory fields. DraftFinalResponse skill retrieves memory context before generating draft. HumanReviewService persists feedback after review save. VPS build clean. Note: StyleMemory uses expressionText (text) not style.expression (jsonb) — adapted.
+- **07-02 pre-committed:** AdminConfigController + AdminConfigService committed as 0bdb2c8 in prior session. STATUS.md needs refresh before executing 07-03.
 
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Completed 06-04-PLAN.md — Phase 6 gap closure complete (transition DTO schema fix), VPS build passes clean
+Stopped at: Completed 07-01-PLAN.md — memory services (MemoryRetrievalService, MemoryFeedbackService) wired into DraftFinalResponse skill and HumanReviewService; VPS build clean
 Resume file: None
