@@ -126,13 +126,13 @@ Plans:
   3. Admin can configure all catalog items (personas, templates, steps, skills, capabilities, LLM models) from the UI without recompiling the application
   4. Observability dashboard shows latency per step, cost per ticket, error rate per skill, human intervention rate, regulatory conformance by tipologia, and token/cost totals; Trace Explorer allows end-to-end debug of any execution
   5. CPF and phone numbers are masked in the frontend; prompt logs have sensitive data redacted; access trail is auditable; profile segregation is enforced
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 07-01: Memory & learning — case memory, human correction memory, style memory, similarity matcher for cases and corrections, approved pattern suggestions
-- [ ] 07-02: Personas catalog + configuration admin UI (personas, templates, steps, skills, capabilities, LLM models)
-- [ ] 07-03: Observability — logs per ticket, metric panels (latency, cost, error rate, HITL rate, conformance, tokens), Trace Explorer, compliance score
-- [ ] 07-04: Security & LGPD — CPF/phone masking, prompt redaction, access audit trail, profile segregation enforcement, prompt/template versioning
+- [ ] 07-01-PLAN.md — Memory & learning: MemoryRetrievalService (similar cases + corrections via pgvector), MemoryFeedbackService (human review → HumanFeedbackMemory), PromptContext extension, wired into SkillRegistryService and HumanReviewService
+- [ ] 07-02-PLAN.md — Personas catalog + configuration admin UI: AdminConfigController/Service (12 endpoints), frontend admin pages for personas, templates, skills, capabilities, and LLM models
+- [ ] 07-03-PLAN.md — Observability dashboards: ObservabilityService/Controller (8 endpoints), recharts install, 6 metric panels, Trace Explorer, per-ticket logs
+- [ ] 07-04-PLAN.md — Security & LGPD: SensitiveDataInterceptor on complaint/execution controllers, frontend maskSensitive utilities, ticket detail page masking
 
 ## Progress
 
