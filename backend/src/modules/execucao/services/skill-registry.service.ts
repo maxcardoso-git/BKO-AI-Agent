@@ -20,6 +20,7 @@ import { ModelSelectorService } from '../../ia/services/model-selector.service';
 import { VectorSearchService } from '../../base-de-conhecimento/services/vector-search.service';
 import { TemplateResolverService } from '../../base-de-conhecimento/services/template-resolver.service';
 import { MandatoryInfoResolverService } from '../../base-de-conhecimento/services/mandatory-info-resolver.service';
+import { MemoryRetrievalService } from '../../memoria/services/memory-retrieval.service';
 
 const DetermineActionSchema = z.object({
   actionKey: z.enum(['responder', 'reclassificar', 'reencaminhar', 'cancelar']),
@@ -65,6 +66,9 @@ export class SkillRegistryService {
     private readonly vectorSearch: VectorSearchService,
     private readonly templateResolver: TemplateResolverService,
     private readonly mandatoryInfoResolver: MandatoryInfoResolverService,
+
+    // Memory retrieval (MEM-01..MEM-06)
+    private readonly memoryRetrieval: MemoryRetrievalService,
   ) {}
 
   /**
@@ -133,7 +137,32 @@ export class SkillRegistryService {
           return await this.buildMandatoryChecklist(input, stepExecutionId, complaintId);
 
         case 'DraftFinalResponse': {
-          const result = await this.draftGenerator.generate(input);
+          // Retrieve memory context (cases, corrections, style patterns) before generating draft
+          const tipologyId = (input['tipologyId'] as string) ?? '';
+          const complaintText = (input['normalizedText'] as string) ?? (input['complaintText'] as string) ?? '';
+          let memoryAugmentedInput = input;
+          try {
+            const embeddingModel = await this.modelSelector.getEmbeddingModel();
+            const { embedding: memEmbedding } = await embed({ model: embeddingModel, value: complaintText });
+            const [similarCasesRaw, humanCorrectionsRaw, stylePatternsRaw] = await Promise.all([
+              this.memoryRetrieval.findSimilarCases(memEmbedding, tipologyId, 3),
+              this.memoryRetrieval.findSimilarCorrections(memEmbedding, tipologyId, 3),
+              this.memoryRetrieval.findStylePatterns(tipologyId, 5),
+            ]);
+            const stylePatterns = stylePatternsRaw.map(p => ({
+              expression: p.expressionText,
+              type: p.expressionType as 'approved' | 'forbidden',
+            }));
+            memoryAugmentedInput = {
+              ...input,
+              similarCases: similarCasesRaw,
+              humanCorrections: humanCorrectionsRaw,
+              stylePatterns,
+            };
+          } catch (memErr) {
+            this.logger.warn(`DraftFinalResponse: memory retrieval failed, continuing without memory context. Error: ${memErr}`);
+          }
+          const result = await this.draftGenerator.generate(memoryAugmentedInput);
           if (result.usage) {
             const usage = result.usage as { inputTokens: number; outputTokens: number };
             await this.tokenUsageTracker.track({

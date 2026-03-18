@@ -18,6 +18,10 @@ export interface PromptContext {
   personaTone?: string;
   personaInstructions?: string;
   previousStepOutputs?: Record<string, Record<string, unknown>>;
+  // Memory-augmented context (MEM-01..MEM-06)
+  similarCases?: Array<{ metadata: Record<string, unknown>; similarity: number }>;
+  humanCorrections?: Array<{ aiText: string; humanText: string; diffDescription: string; similarity: number }>;
+  stylePatterns?: Array<{ expression: string; type: 'approved' | 'forbidden' }>;
 }
 
 @Injectable()
@@ -93,6 +97,38 @@ export class PromptBuilderService {
       for (const chunk of ctx.kbChunks) {
         system.push('---');
         system.push(chunk.content);
+      }
+    }
+
+    if (ctx.similarCases && ctx.similarCases.length > 0) {
+      system.push('', '## Casos similares resolvidos anteriormente:');
+      for (const c of ctx.similarCases) {
+        system.push(`- Similaridade: ${(c.similarity * 100).toFixed(0)}% | ${JSON.stringify(c.metadata)}`);
+      }
+    }
+
+    if (ctx.humanCorrections && ctx.humanCorrections.length > 0) {
+      system.push('', '## Correcoes humanas em respostas anteriores similares:');
+      for (const h of ctx.humanCorrections) {
+        system.push(`- Correcao (${(h.similarity * 100).toFixed(0)}% similar): ${h.diffDescription}`);
+        system.push(`  Versao humana aprovada: ${h.humanText.slice(0, 300)}`);
+      }
+    }
+
+    if (ctx.stylePatterns && ctx.stylePatterns.length > 0) {
+      const approved = ctx.stylePatterns.filter(p => p.type === 'approved');
+      const forbidden = ctx.stylePatterns.filter(p => p.type === 'forbidden');
+      if (approved.length > 0) {
+        system.push('', '## Expressoes aprovadas para esta tipologia (use estas):');
+        for (const p of approved) {
+          system.push(`- "${p.expression}"`);
+        }
+      }
+      if (forbidden.length > 0) {
+        system.push('', '## Expressoes proibidas para esta tipologia (evite estas):');
+        for (const p of forbidden) {
+          system.push(`- "${p.expression}"`);
+        }
       }
     }
 

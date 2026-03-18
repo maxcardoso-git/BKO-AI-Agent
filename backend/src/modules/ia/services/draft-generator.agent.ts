@@ -49,7 +49,11 @@ export class DraftGeneratorAgent {
       ? await this.mandatoryInfoResolver.resolve(tipologyId, situationId)
       : [];
 
-    // 4. Build prompt
+    // 4. Build prompt — include memory-augmented context if passed in
+    const similarCases = input['similarCases'] as Array<{ metadata: Record<string, unknown>; similarity: number }> | undefined;
+    const humanCorrections = input['humanCorrections'] as Array<{ aiText: string; humanText: string; diffDescription: string; similarity: number }> | undefined;
+    const stylePatterns = input['stylePatterns'] as Array<{ expression: string; type: 'approved' | 'forbidden' }> | undefined;
+
     const ctx: PromptContext = {
       complaintText,
       tipologyKey,
@@ -62,6 +66,9 @@ export class DraftGeneratorAgent {
       template,
       mandatoryFields,
       previousStepOutputs,
+      similarCases,
+      humanCorrections,
+      stylePatterns,
     };
 
     const { system, user } = this.promptBuilder.buildDraftResponsePrompt(ctx);

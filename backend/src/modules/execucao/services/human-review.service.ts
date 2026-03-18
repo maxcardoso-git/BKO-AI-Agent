@@ -6,6 +6,7 @@ import { StepExecution } from '../entities/step-execution.entity';
 import { Artifact } from '../entities/artifact.entity';
 import { diffWords } from 'diff';
 import { SubmitReviewDto } from '../dto/submit-review.dto';
+import { MemoryFeedbackService } from '../../memoria/services/memory-feedback.service';
 
 // ---------------------------------------------------------------------------
 // HitlPolicyService — risk-aware HITL gate
@@ -42,6 +43,8 @@ export class HumanReviewService {
 
     @InjectRepository(StepExecution)
     private readonly stepExecRepo: Repository<StepExecution>,
+
+    private readonly memoryFeedback: MemoryFeedbackService,
   ) {}
 
   /**
@@ -50,7 +53,7 @@ export class HumanReviewService {
   async getStepExecution(stepExecutionId: string): Promise<StepExecution> {
     const stepExec = await this.stepExecRepo.findOne({
       where: { id: stepExecutionId },
-      relations: ['ticketExecution'],
+      relations: ['ticketExecution', 'ticketExecution.complaint'],
     });
     if (!stepExec) {
       throw new HttpException('StepExecution not found', 404);
@@ -137,6 +140,20 @@ export class HumanReviewService {
       };
       await this.artifactRepo.save(humanDiffArtifact);
     }
+
+    // 5. Fire-and-forget: persist human feedback for future memory retrieval (MEM-04)
+    // Load stepExec to get tipologyId via ticketExecution.complaint relation
+    const stepExecWithComplaint = await this.stepExecRepo.findOne({
+      where: { id: stepExecutionId },
+      relations: ['ticketExecution', 'ticketExecution.complaint'],
+    });
+    void this.memoryFeedback.persistFeedback(
+      aiGeneratedText,
+      dto.humanFinalText ?? aiGeneratedText,
+      diffSummary ?? '',
+      complaintId,
+      stepExecWithComplaint?.ticketExecution?.complaint?.tipologyId ?? null,
+    ).catch(err => console.error('[MemoryFeedback] persist failed', err));
 
     return review;
   }
