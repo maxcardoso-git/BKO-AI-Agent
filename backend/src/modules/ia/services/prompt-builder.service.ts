@@ -72,7 +72,10 @@ export class PromptBuilderService {
       '- A resposta deve ser clara, objetiva e profissional',
       '- Deve enderecar todos os pontos da reclamacao do consumidor',
       '- Deve citar as acoes tomadas pela operadora',
-      '- Deve seguir o template IQI quando disponivel',
+      '- OBRIGATORIO: Quando um template IQI estiver disponivel, siga sua estrutura EXATAMENTE',
+      '- Preencha todos os {{placeholders}} com os dados reais fornecidos',
+      '- NAO adicione secoes que nao existam no template',
+      '- NAO omita secoes do template',
     ];
 
     if (ctx.personaTone) {
@@ -83,8 +86,24 @@ export class PromptBuilderService {
     }
 
     if (ctx.template) {
-      system.push('', '## Template IQI de referencia:');
-      system.push(ctx.template.templateContent);
+      system.push(
+        '',
+        '## TEMPLATE OBRIGATORIO (siga EXATAMENTE esta estrutura):',
+        'Voce DEVE usar este template como base da resposta.',
+        'Substitua cada {{placeholder}} pelo valor real correspondente.',
+        'NAO invente campos. Se um dado nao estiver disponivel, use "Nao informado".',
+        '',
+        ctx.template.templateContent,
+        '',
+        '## Legenda dos placeholders:',
+        '- {{nome_reclamante}} = nome do assinante (se disponivel) ou "Consumidor"',
+        '- {{numero_protocolo}} = numero do protocolo Anatel da reclamacao',
+        '- {{data_reclamacao}} = data de abertura da reclamacao (extraia do contexto ou use "data nao informada")',
+        '- {{providencia_adotada}} = descreva objetivamente a acao tomada pela operadora',
+        '- {{status_cobranca}} = "confirmada e o estorno sera processado" ou "contestada" conforme o caso',
+        '- {{prazo_estorno}} = numero de dias uteis para o credito (padrao: 5 a 10 dias uteis)',
+        '- {{status_cancelamento}}, {{plano_servico}}, {{tipo_servico}}, etc. = use conforme o template aplicavel',
+      );
     }
 
     if (ctx.mandatoryFields && ctx.mandatoryFields.length > 0) {
