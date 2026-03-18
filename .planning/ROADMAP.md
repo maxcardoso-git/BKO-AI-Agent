@@ -109,12 +109,12 @@ Plans:
   3. Operator can approve the final response only after completing the HITL checklist; approval is recorded with timestamp and user
   4. System persists diff and correction reason for every human edit (feeds memory layer)
   5. Admin can create and edit step flows in the visual designer, including skill bindings, LLM model per step, conditions (SLA, risk, procedencia), and human-required flag
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 06-01: Step processor UI — 4-column layout (ticket data, current step, generated artifact, human review), advance button, step blocking
-- [ ] 06-02: HITL editor — AI text view, diff panel, regulatory checklist, observations, approval action; BFF human-review endpoint; diff persistence
-- [ ] 06-03: Steps designer — visual flow builder, step/skill/LLM bindings, condition rules, situacao variations, risk deviations
+- [ ] 06-01-PLAN.md — Backend BFF: HumanReviewController + HumanReviewService (diff computation, ART-11 update), HitlPolicyService (risk-aware HITL gate), StepsDesignerController + StepsDesignerService (atomic step CRUD)
+- [ ] 06-02-PLAN.md — Step processor UI: 4-column layout (ticket data, current step, artifact viewer, human action panel), advance/retry server actions, HITL editor link on paused_human
+- [ ] 06-03-PLAN.md — HITL editor UI (AI view, edit, diff panel, regulatory checklist, approval) + Steps designer admin pages (/admin/steps list and detail with reorder)
 
 ### Phase 7: Polish & Compliance
 **Goal**: The platform has memory-driven response improvement, governed persona catalog, full configuration admin, operational observability dashboards, and LGPD/security controls in place
