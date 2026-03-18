@@ -76,26 +76,26 @@
 
 ### Skills Catalog
 
-- [ ] **SKLL-01**: LoadComplaintSkill — carrega dados da reclamacao
-- [ ] **SKLL-02**: NormalizeComplaintTextSkill — normaliza texto da reclamacao
-- [ ] **SKLL-03**: ComputeSlaSkill — calcula prazo regulatorio
-- [ ] **SKLL-04**: ClassifyTypologySkill — classifica tipologia com IA
-- [ ] **SKLL-05**: DetermineRegulatoryActionSkill — decide acao regulatoria
-- [ ] **SKLL-06**: ValidateReclassificationNeedSkill — valida necessidade de reclassificacao
-- [ ] **SKLL-07**: ValidateReencaminhamentoNeedSkill — valida necessidade de reencaminhamento
-- [ ] **SKLL-08**: ValidateCancelamentoNeedSkill — valida necessidade de cancelamento
-- [ ] **SKLL-09**: RetrieveManualContextSkill — recupera contexto do Manual Anatel
-- [ ] **SKLL-10**: RetrieveIQITemplateSkill — recupera template IQI por tipologia
-- [ ] **SKLL-11**: BuildMandatoryChecklistSkill — monta checklist de itens obrigatorios
-- [ ] **SKLL-12**: GenerateTreatmentArtifactSkill — gera artefato de tratamento
-- [ ] **SKLL-13**: ApplyPersonaToneSkill — aplica tom da persona na resposta
-- [ ] **SKLL-14**: DraftFinalResponseSkill — gera rascunho da resposta final
-- [ ] **SKLL-15**: ComplianceCheckSkill — avalia conformidade regulatoria
-- [ ] **SKLL-16**: HumanDiffCaptureSkill — captura diff entre IA e humano
-- [ ] **SKLL-17**: PersistMemorySkill — salva caso na memoria
-- [ ] **SKLL-18**: TrackTokenUsageSkill — registra consumo de tokens
-- [ ] **SKLL-19**: AuditTrailSkill — registra trilha de auditoria
-- [ ] **SKLL-20**: Cada skill registra: input, output, status, tempo, custo, modelo, versao prompt, versao template, erros
+- [x] **SKLL-01**: LoadComplaintSkill — carrega dados da reclamacao
+- [x] **SKLL-02**: NormalizeComplaintTextSkill — normaliza texto da reclamacao
+- [x] **SKLL-03**: ComputeSlaSkill — calcula prazo regulatorio
+- [x] **SKLL-04**: ClassifyTypologySkill — classifica tipologia com IA
+- [x] **SKLL-05**: DetermineRegulatoryActionSkill — decide acao regulatoria
+- [x] **SKLL-06**: ValidateReclassificationNeedSkill — valida necessidade de reclassificacao
+- [x] **SKLL-07**: ValidateReencaminhamentoNeedSkill — valida necessidade de reencaminhamento
+- [x] **SKLL-08**: ValidateCancelamentoNeedSkill — valida necessidade de cancelamento
+- [x] **SKLL-09**: RetrieveManualContextSkill — recupera contexto do Manual Anatel
+- [x] **SKLL-10**: RetrieveIQITemplateSkill — recupera template IQI por tipologia
+- [x] **SKLL-11**: BuildMandatoryChecklistSkill — monta checklist de itens obrigatorios
+- [x] **SKLL-12**: GenerateTreatmentArtifactSkill — gera artefato de tratamento
+- [x] **SKLL-13**: ApplyPersonaToneSkill — aplica tom da persona na resposta
+- [x] **SKLL-14**: DraftFinalResponseSkill — gera rascunho da resposta final
+- [x] **SKLL-15**: ComplianceCheckSkill — avalia conformidade regulatoria
+- [x] **SKLL-16**: HumanDiffCaptureSkill — captura diff entre IA e humano
+- [x] **SKLL-17**: PersistMemorySkill — salva caso na memoria
+- [x] **SKLL-18**: TrackTokenUsageSkill — registra consumo de tokens
+- [x] **SKLL-19**: AuditTrailSkill — registra trilha de auditoria
+- [x] **SKLL-20**: Cada skill registra: input, output, status, tempo, custo, modelo, versao prompt, versao template, erros
 
 ### AI Service
 
@@ -178,17 +178,17 @@
 
 ### Artifacts
 
-- [ ] **ART-01**: Extracao estruturada do ticket
-- [ ] **ART-02**: Classificacao de tipologia
-- [ ] **ART-03**: Classificacao de situacao
-- [ ] **ART-04**: Decisao regulatoria
-- [ ] **ART-05**: Checklist de obrigatorios
-- [ ] **ART-06**: Evidencias do caso
-- [ ] **ART-07**: Template selecionado
-- [ ] **ART-08**: Rascunho de resposta
-- [ ] **ART-09**: Parecer de conformidade
-- [ ] **ART-10**: Diff humano
-- [ ] **ART-11**: Resposta final
+- [x] **ART-01**: Extracao estruturada do ticket
+- [x] **ART-02**: Classificacao de tipologia
+- [x] **ART-03**: Classificacao de situacao
+- [x] **ART-04**: Decisao regulatoria
+- [x] **ART-05**: Checklist de obrigatorios
+- [x] **ART-06**: Evidencias do caso
+- [x] **ART-07**: Template selecionado
+- [x] **ART-08**: Rascunho de resposta
+- [x] **ART-09**: Parecer de conformidade
+- [x] **ART-10**: Diff humano
+- [x] **ART-11**: Resposta final
 
 ## v2 Requirements
 
@@ -275,37 +275,37 @@
 | KB-06 | Phase 4 | Complete |
 | KB-07 | Phase 4 | Complete |
 | KB-08 | Phase 4 | Complete |
-| SKLL-01 | Phase 5 | Pending |
-| SKLL-02 | Phase 5 | Pending |
-| SKLL-03 | Phase 5 | Pending |
-| SKLL-04 | Phase 5 | Pending |
-| SKLL-05 | Phase 5 | Pending |
-| SKLL-06 | Phase 5 | Pending |
-| SKLL-07 | Phase 5 | Pending |
-| SKLL-08 | Phase 5 | Pending |
-| SKLL-09 | Phase 5 | Pending |
-| SKLL-10 | Phase 5 | Pending |
-| SKLL-11 | Phase 5 | Pending |
-| SKLL-12 | Phase 5 | Pending |
-| SKLL-13 | Phase 5 | Pending |
-| SKLL-14 | Phase 5 | Pending |
-| SKLL-15 | Phase 5 | Pending |
-| SKLL-16 | Phase 5 | Pending |
-| SKLL-17 | Phase 5 | Pending |
-| SKLL-18 | Phase 5 | Pending |
-| SKLL-19 | Phase 5 | Pending |
-| SKLL-20 | Phase 5 | Pending |
-| ART-01 | Phase 5 | Pending |
-| ART-02 | Phase 5 | Pending |
-| ART-03 | Phase 5 | Pending |
-| ART-04 | Phase 5 | Pending |
-| ART-05 | Phase 5 | Pending |
-| ART-06 | Phase 5 | Pending |
-| ART-07 | Phase 5 | Pending |
-| ART-08 | Phase 5 | Pending |
-| ART-09 | Phase 5 | Pending |
-| ART-10 | Phase 5 | Pending |
-| ART-11 | Phase 5 | Pending |
+| SKLL-01 | Phase 5 | Complete |
+| SKLL-02 | Phase 5 | Complete |
+| SKLL-03 | Phase 5 | Complete |
+| SKLL-04 | Phase 5 | Complete |
+| SKLL-05 | Phase 5 | Complete |
+| SKLL-06 | Phase 5 | Complete |
+| SKLL-07 | Phase 5 | Complete |
+| SKLL-08 | Phase 5 | Complete |
+| SKLL-09 | Phase 5 | Complete |
+| SKLL-10 | Phase 5 | Complete |
+| SKLL-11 | Phase 5 | Complete |
+| SKLL-12 | Phase 5 | Complete |
+| SKLL-13 | Phase 5 | Complete |
+| SKLL-14 | Phase 5 | Complete |
+| SKLL-15 | Phase 5 | Complete |
+| SKLL-16 | Phase 5 | Complete |
+| SKLL-17 | Phase 5 | Complete |
+| SKLL-18 | Phase 5 | Complete |
+| SKLL-19 | Phase 5 | Complete |
+| SKLL-20 | Phase 5 | Complete |
+| ART-01 | Phase 5 | Complete |
+| ART-02 | Phase 5 | Complete |
+| ART-03 | Phase 5 | Complete |
+| ART-04 | Phase 5 | Complete |
+| ART-05 | Phase 5 | Complete |
+| ART-06 | Phase 5 | Complete |
+| ART-07 | Phase 5 | Complete |
+| ART-08 | Phase 5 | Complete |
+| ART-09 | Phase 5 | Complete |
+| ART-10 | Phase 5 | Complete |
+| ART-11 | Phase 5 | Complete |
 | STEP-01 | Phase 6 | Pending |
 | STEP-02 | Phase 6 | Pending |
 | STEP-03 | Phase 6 | Pending |
