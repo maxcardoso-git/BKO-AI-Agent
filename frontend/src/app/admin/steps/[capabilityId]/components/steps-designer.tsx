@@ -14,9 +14,11 @@ interface Props {
 function TransitionsEditor({
   stepId,
   capabilityId,
+  steps,
 }: {
   stepId: string
   capabilityId: string
+  steps: StepItem[]
 }) {
   const [transitions, setTransitions] = useState<TransitionCondition[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -33,7 +35,14 @@ function TransitionsEditor({
   }
 
   function addRow() {
-    setTransitions(prev => [...prev, { condition: { field: '', operator: 'eq', value: '' }, targetStepOrder: 1 }])
+    setTransitions(prev => [
+      ...prev,
+      {
+        condition: { field: '', operator: 'eq', value: '' },
+        targetStepOrder: steps[0]?.stepOrder ?? 1,
+        targetStepKey: steps[0]?.key ?? '',
+      },
+    ])
     setSaved(false)
   }
 
@@ -52,7 +61,7 @@ function TransitionsEditor({
   function handleSave() {
     setError(null)
     startTransition(async () => {
-      const result = await saveTransitions(stepId, capabilityId, transitions)
+      const result = await saveTransitions(stepId, capabilityId, transitions, steps)
       if (result && 'error' in result) {
         setError(result.error as string)
       } else {
@@ -107,13 +116,24 @@ function TransitionsEditor({
                 className="text-xs border rounded px-2 py-1 w-28"
               />
               <span className="text-xs text-muted-foreground">→ step</span>
-              <input
-                type="number"
-                min={1}
-                value={t.targetStepOrder}
-                onChange={e => updateRow(idx, { targetStepOrder: Number(e.target.value) })}
-                className="text-xs border rounded px-2 py-1 w-14"
-              />
+              <select
+                value={t.targetStepKey ?? ''}
+                onChange={e => {
+                  const selected = steps.find(s => s.key === e.target.value)
+                  updateRow(idx, {
+                    targetStepKey: e.target.value,
+                    targetStepOrder: selected?.stepOrder ?? 0,
+                  })
+                }}
+                className="text-xs border rounded px-2 py-1 w-36"
+              >
+                <option value="">-- step alvo --</option>
+                {steps.map(s => (
+                  <option key={s.key} value={s.key}>
+                    {s.stepOrder}. {s.name}
+                  </option>
+                ))}
+              </select>
               <button
                 type="button"
                 onClick={() => removeRow(idx)}
@@ -263,6 +283,7 @@ export function StepsDesigner({ capabilityId, versionId, initialSteps }: Props) 
                     <TransitionsEditor
                       stepId={step.id}
                       capabilityId={capabilityId}
+                      steps={steps}
                     />
                   )}
                 </div>

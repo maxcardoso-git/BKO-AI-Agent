@@ -16,19 +16,26 @@ export interface StepItem {
 export interface TransitionCondition {
   condition: { field: string; operator: string; value: string }
   targetStepOrder: number
+  targetStepKey?: string   // resolved before save; populated on load
 }
 
 export async function getTransitions(stepId: string): Promise<TransitionCondition[]> {
   const res = await fetchAuthAPI(`/api/admin/steps/${stepId}/transitions`)
   if (!res.ok) return []
-  const data = await res.json()
-  return (data as Array<{ condition: { field?: string; operator?: string; value?: string }; targetStepOrder: number }>).map(t => ({
+  const data = await res.json() as Array<{
+    conditionType: string
+    conditionExpression: Record<string, unknown>
+    targetStepKey: string
+    priority?: number
+  }>
+  return data.map(t => ({
     condition: {
-      field: t.condition?.field ?? '',
-      operator: t.condition?.operator ?? 'eq',
-      value: t.condition?.value ?? '',
+      field: t.conditionType ?? '',
+      operator: (t.conditionExpression?.operator as string) ?? 'eq',
+      value: (t.conditionExpression?.value as string) ?? '',
     },
-    targetStepOrder: t.targetStepOrder,
+    targetStepOrder: 0,         // will be resolved by UI from targetStepKey
+    targetStepKey: t.targetStepKey ?? '',
   }))
 }
 
@@ -59,12 +66,30 @@ export async function saveTransitions(
   stepId: string,
   capabilityId: string,
   transitions: TransitionCondition[],
+  steps: StepItem[],
 ) {
+  const payload = transitions.map(t => {
+    // Prefer explicit targetStepKey; fall back to resolving from targetStepOrder
+    const resolvedKey =
+      t.targetStepKey ||
+      steps.find(s => s.stepOrder === t.targetStepOrder)?.key ||
+      String(t.targetStepOrder)
+
+    return {
+      conditionType: t.condition.field,
+      conditionExpression: {
+        operator: t.condition.operator,
+        value: t.condition.value,
+      },
+      targetStepKey: resolvedKey,
+    }
+  })
+
   const res = await fetchAuthAPI(
     `/api/admin/steps/${stepId}/transitions`,
     {
       method: 'PUT',
-      body: JSON.stringify({ transitions }),
+      body: JSON.stringify({ transitions: payload }),
     }
   )
 
