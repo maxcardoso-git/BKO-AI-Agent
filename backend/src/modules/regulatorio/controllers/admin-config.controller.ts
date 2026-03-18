@@ -58,6 +58,12 @@ export class AdminConfigController {
     return this.adminConfigService.listTemplates();
   }
 
+  @Post('admin/templates')
+  @Roles(UserRole.ADMIN)
+  createTemplate(@Body() body: Partial<ResponseTemplate>): Promise<ResponseTemplate> {
+    return this.adminConfigService.createTemplate(body);
+  }
+
   @Patch('admin/templates/:id')
   @Roles(UserRole.ADMIN)
   updateTemplate(
@@ -109,6 +115,12 @@ export class AdminConfigController {
   @Roles(UserRole.ADMIN)
   listModels(): Promise<LlmModelConfig[]> {
     return this.adminConfigService.listModels();
+  }
+
+  @Post('admin/models')
+  @Roles(UserRole.ADMIN)
+  createModel(@Body() body: Partial<LlmModelConfig>): Promise<LlmModelConfig> {
+    return this.adminConfigService.createModel(body);
   }
 
   @Patch('admin/models/:id')

@@ -61,6 +61,10 @@ export class AdminConfigService {
     return this.templateRepo.find({ order: { version: 'DESC' } });
   }
 
+  async createTemplate(dto: Partial<ResponseTemplate>): Promise<ResponseTemplate> {
+    return this.templateRepo.save(this.templateRepo.create(dto));
+  }
+
   async updateTemplate(id: string, dto: Partial<ResponseTemplate>): Promise<ResponseTemplate> {
     const existing = await this.templateRepo.findOneOrFail({ where: { id } });
     const updated = { ...existing, ...dto, version: (existing.version ?? 0) + 1 };
@@ -93,6 +97,10 @@ export class AdminConfigService {
 
   listModels(): Promise<LlmModelConfig[]> {
     return this.modelRepo.find({ order: { functionalityType: 'ASC' } });
+  }
+
+  async createModel(dto: Partial<LlmModelConfig>): Promise<LlmModelConfig> {
+    return this.modelRepo.save(this.modelRepo.create(dto));
   }
 
   async updateModel(id: string, dto: Partial<LlmModelConfig>): Promise<LlmModelConfig> {
