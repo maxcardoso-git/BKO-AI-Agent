@@ -9,12 +9,12 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 
 ## Current Position
 
-Phase: 4 of 7 (Intelligence Layer) — COMPLETE
-Plan: 3 of 3 in phase 04 (all complete, verified 16/16)
-Status: Phase 4 fully closed — 04-01, 04-02, 04-03 done
-Last activity: 2026-03-18 — Phase 4 complete. Verification passed 16/16. Ready for Phase 5.
+Phase: 5 of 7 (Skills Pipeline) — In progress
+Plan: 1 of 3 in phase 05 (05-01 complete)
+Status: In progress — 05-01 done, 05-02 and 05-03 pending
+Last activity: 2026-03-17 — Completed 05-01-PLAN.md (SkillRegistryService + Wave 1 skills + PersonaSeeder)
 
-Progress: [████████░░] 59% (13/22 plans)
+Progress: [████████░░] 63% (14/22 plans)
 
 ## Performance Metrics
 
@@ -103,6 +103,10 @@ Recent decisions affecting current work:
 - 04-03: FinalResponseComposerAgent returns model:'none' when no violations — token tracker skips on sentinel
 - 04-03: No @Roles on KbManagerController — global JwtAuthGuard protects; role enforcement deferred to Phase 7
 - 04-03: executeSkill try/catch returns error-as-data — pipeline records failure without crashing
+- 05-01: SkillRegistryService is single owner of all skill logic — TicketExecutionService delegates entirely, no skill implementations remain in ticket-execution.service.ts
+- 05-01: complaintId passed as explicit 4th parameter to SkillRegistryService.execute() — never derived from input metadata to avoid stale-data artifact FKs
+- 05-01: MemoriaModule imported into ExecucaoModule to enable CaseMemory + HumanFeedbackMemory repos in SkillRegistryService constructor (Wave 3 readiness)
+- 05-01: DetermineRegulatoryAction uses 'classificacao' functionalityType (light model) + generateObject with Zod schema for cost-efficient structured regulatory action classification
 
 ### Pending Todos
 
@@ -123,9 +127,10 @@ None.
 - **04-01 done:** BaseDeConhecimentoModule live with DocumentIngestionService (PDF RAG ingestion), VectorSearchService (pgvector cosine), TemplateResolverService (3-tier IQI), MandatoryInfoResolverService (dedup). LlmModelConfig entity + migration + 4 model configs seeded. Ready for 04-02 AI classification.
 - **04-02 done:** IaModule live with ModelSelectorService (DB-driven multi-model routing + callWithFallback), PromptBuilderService (3 context-rich prompt builders), ComplaintParsingAgent (generateObject + Zod), DraftGeneratorAgent (generateText). Ready for 04-03 real skill dispatch.
 - **04-03 done:** ComplianceEvaluatorAgent + FinalResponseComposerAgent + TokenUsageTrackerService live. KbManagerController (POST /api/kb/upload, GET /api/kb/documents). TicketExecutionService.executeSkillStub replaced by async executeSkill routing 6 skills to real AI agents + token tracking. ExecucaoModule->IaModule wired, no circular deps. Ready for 04-04 (phase completion).
+- **05-01 done:** SkillRegistryService live as central skill dispatcher (all 19 skills). Wave 1 skills implemented: LoadComplaint (ART-01), NormalizeComplaintText (ART-02), ComputeSla (ART-03), DetermineRegulatoryAction (ART-04 + generateObject + Zod), ValidateReclassification, ValidateReencaminhamento, ValidateCancelamento. AI skills from Phase 4 moved to SkillRegistryService with artifact persistence. TicketExecutionService is now a thin delegation wrapper. MemoriaModule wired into ExecucaoModule. PersonaSeeder creates 4 personas (one per tipology). Ready for 05-02 Wave 2 skills.
 
 ## Session Continuity
 
-Last session: 2026-03-18
-Stopped at: Completed 04-03-PLAN.md — AI skill dispatch integration (ComplianceEvaluator, FinalResponseComposer, TokenUsageTracker, KbManagerController, real executeSkill)
+Last session: 2026-03-17
+Stopped at: Completed 05-01-PLAN.md — SkillRegistryService + Wave 1 skills + MemoriaModule wiring + PersonaSeeder
 Resume file: None
