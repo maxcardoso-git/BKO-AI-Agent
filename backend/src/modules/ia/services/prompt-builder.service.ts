@@ -11,7 +11,9 @@ export interface PromptContext {
   slaDeadline?: string;
   slaBusinessDays?: number;
   protocolNumber?: string;
+  protocoloPrestadora?: string | null;
   consumerName?: string;
+  consumerCpf?: string | null;
   kbChunks?: VectorSearchResult[];
   template?: ResolvedTemplate | null;
   mandatoryFields?: ResolvedMandatoryField[];
@@ -134,11 +136,13 @@ export class PromptBuilderService {
 
     const user = [
       `## Dados da reclamacao`,
-      `- Protocolo: ${ctx.protocolNumber ?? 'N/A'}`,
+      `- Protocolo Anatel: ${ctx.protocolNumber ?? 'N/A'}`,
+      ...(ctx.protocoloPrestadora ? [`- Protocolo Prestadora: ${ctx.protocoloPrestadora}`] : []),
       `- Tipologia: ${ctx.tipologyName ?? ctx.tipologyKey}`,
       `- Situacao: ${ctx.situationKey ?? 'N/A'}`,
       `- Prazo SLA: ${ctx.slaDeadline ?? 'N/A'} (${ctx.slaBusinessDays ?? '?'} dias uteis)`,
-      `- Consumidor: ${ctx.consumerName ?? 'N/A'}`,
+      `- Consumidor: ${ctx.consumerName ?? 'Nao identificado no arquivo'}`,
+      ...(ctx.consumerCpf ? [`- CPF/CNPJ: ${ctx.consumerCpf}`] : []),
       '',
       '## Texto da reclamacao:',
       ctx.complaintText,

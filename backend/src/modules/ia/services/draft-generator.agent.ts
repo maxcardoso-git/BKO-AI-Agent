@@ -30,8 +30,13 @@ export class DraftGeneratorAgent {
     const tipologyId = input['tipologyId'] as string | undefined;
     const situationKey = input['situationKey'] as string | null ?? null;
     const situationId = input['situationId'] as string | null ?? null;
-    const protocolNumber = input['protocolNumber'] as string | undefined;
+    // Support both top-level and nested (legacy) formats
+    const complaintNested = input['complaint'] as Record<string, unknown> | undefined;
+    const protocolNumber = (input['protocolNumber'] as string | undefined)
+      ?? (complaintNested?.['protocolNumber'] as string | undefined);
+    const protocoloPrestadora = input['protocoloPrestadora'] as string | null | undefined;
     const consumerName = input['consumerName'] as string | undefined;
+    const consumerCpf = input['consumerCpf'] as string | null | undefined;
     const slaDeadline = input['slaDeadline'] as string | undefined;
     const slaBusinessDays = input['slaBusinessDays'] as number | undefined;
     const previousStepOutputs = input['stepOutputs'] as Record<string, Record<string, unknown>> | undefined;
@@ -59,7 +64,9 @@ export class DraftGeneratorAgent {
       tipologyKey,
       situationKey,
       protocolNumber,
+      protocoloPrestadora,
       consumerName,
+      consumerCpf,
       slaDeadline,
       slaBusinessDays,
       kbChunks,
@@ -83,7 +90,7 @@ export class DraftGeneratorAgent {
           system,
           prompt: user,
           temperature: config.temperature,
-          maxOutputTokens: config.maxTokens ?? 4096,
+          maxOutputTokens: config.maxOutputTokens ?? 4096,
         });
         const latencyMs = Date.now() - startTime;
 

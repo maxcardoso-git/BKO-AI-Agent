@@ -318,6 +318,11 @@ export class SkillRegistryService {
 
     return {
       complaint: { id: complaint.id, protocolNumber: complaint.protocolNumber },
+      // Top-level fields for downstream skills (DraftGeneratorAgent, PromptBuilderService)
+      protocolNumber: complaint.protocolNumber,
+      protocoloPrestadora: complaint.protocoloPrestadora ?? null,
+      consumerName: complaint.nomeAssinante ?? null,
+      consumerCpf: complaint.cpfCnpjCliente ?? complaint.cpfCnpjAssinante ?? null,
       tipologyId: complaint.tipologyId,
       situationId: complaint.situationId,
       tipologyKey: complaint.tipology?.key ?? null,
@@ -424,7 +429,7 @@ Situacao atual: ${situationKey ?? 'nao informada'}`;
           system: systemPrompt,
           prompt: `Reclamacao:\n${complaintText}`,
           temperature: config.temperature,
-          maxOutputTokens: config.maxTokens ?? 512,
+          maxOutputTokens: config.maxOutputTokens ?? 512,
         });
         const latencyMs = Date.now() - startTime;
 
