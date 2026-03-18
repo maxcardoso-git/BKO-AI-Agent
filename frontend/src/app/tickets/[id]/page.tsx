@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { verifySession } from '@/lib/dal'
 import { fetchAuthAPI } from '@/lib/api'
 import type { Complaint, Execution, Artifact } from '@/lib/types'
+import { maskSensitive } from '@/lib/mask'
 import { TicketHeader } from './components/ticket-header'
 import { TicketDetails } from './components/ticket-details'
 import { TicketHistory } from './components/ticket-history'
@@ -27,9 +28,16 @@ export default async function TicketPage({ params }: TicketPageProps) {
     notFound()
   }
 
-  const complaint: Complaint = await complaintRes.json()
+  const rawComplaint: Complaint = await complaintRes.json()
   const executions: Execution[] = executionsRes.ok ? await executionsRes.json() : []
   const artifacts: Artifact[] = artifactsRes.ok ? await artifactsRes.json() : []
+
+  // Apply frontend masking as defence-in-depth (backend interceptor is primary)
+  const complaint: Complaint = {
+    ...rawComplaint,
+    rawText: maskSensitive(rawComplaint.rawText ?? ''),
+    normalizedText: rawComplaint.normalizedText ? maskSensitive(rawComplaint.normalizedText) : null,
+  }
 
   return (
     <main className="mx-auto max-w-screen-xl px-4 py-8 space-y-6">
