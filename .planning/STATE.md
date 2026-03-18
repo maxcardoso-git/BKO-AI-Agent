@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-03-17)
 ## Current Position
 
 Phase: 4 of 7 (Intelligence Layer) — In progress
-Plan: 2 of 4 in phase 04 complete (04-02 done)
-Status: 04-02 complete — IaModule with ModelSelectorService (DB-driven multi-model routing + fallback), PromptBuilderService (3 prompt builders), ComplaintParsingAgent (generateObject + Zod), DraftGeneratorAgent (generateText)
-Last activity: 2026-03-18 — Completed 04-02-PLAN.md. AI service module established. Ready for 04-03 (step execution with real AI dispatch).
+Plan: 3 of 4 in phase 04 complete (04-03 done)
+Status: 04-03 complete — ComplianceEvaluatorAgent (generateObject+Zod), FinalResponseComposerAgent (generateText), TokenUsageTrackerService (LlmCall+TokenUsage FK chain, per-1M-token cost table), KbManagerController (POST /api/kb/upload, GET /api/kb/documents), TicketExecutionService real async skill dispatch (6 AI skills + 12 stubs), ExecucaoModule imports IaModule
+Last activity: 2026-03-18 — Completed 04-03-PLAN.md. Full intelligence layer dispatch wired. Ready for 04-04 (final plan in phase 4).
 
-Progress: [████████░░] 50% (12/22 plans)
+Progress: [████████░░] 59% (13/22 plans)
 
 ## Performance Metrics
 
@@ -30,7 +30,7 @@ Progress: [████████░░] 50% (12/22 plans)
 | 01-foundation | 3/3 DONE | 29 min | 9.7 min |
 | 02-access-layer | 4/4 DONE | ~61 min | ~15 min |
 | 03-orchestration-engine | 3/3 DONE | ~18 min | ~6 min |
-| 04-intelligence-layer | 2/4 IN PROGRESS | ~20 min | ~10 min |
+| 04-intelligence-layer | 3/4 IN PROGRESS | ~24 min | ~8 min |
 
 **Recent Trend:**
 - Last 5 plans: 45 min, 2 min, 4 min, 18 min, 2 min
@@ -98,6 +98,11 @@ Recent decisions affecting current work:
 - 04-02: classify()/generate() shaped as Record<string,unknown> for TicketExecutionService skill dispatch interface
 - 04-02: IaModule not added to AppModule directly — transitively loaded via ExecucaoModule in 04-03
 - 04-02: PromptBuilderService has 3 builders: classification (generateObject/Zod), draft (generateText), compliance (generateObject in 04-04)
+- 04-03: stepExec saved before skill dispatch — llm_call.stepExecutionId FK is non-nullable; must exist before tokenUsageTracker.track() is called
+- 04-03: IaModule imports TypeOrmModule.forFeature([LlmCall, TokenUsage]) directly — avoids circular dep with ExecucaoModule
+- 04-03: FinalResponseComposerAgent returns model:'none' when no violations — token tracker skips on sentinel
+- 04-03: No @Roles on KbManagerController — global JwtAuthGuard protects; role enforcement deferred to Phase 7
+- 04-03: executeSkill try/catch returns error-as-data — pipeline records failure without crashing
 
 ### Pending Todos
 
@@ -117,9 +122,10 @@ None.
 - **Phase 3 COMPLETE (verified 5/5):** RegulatoryOrchestrationService + TicketExecutionService (step engine, 19 skill stubs) + TicketExecutionController (4 BFF endpoints). Module chain ExecucaoModule->OrquestracaoModule->RegulatorioModule fully wired. Ready for Phase 4 Intelligence Layer.
 - **04-01 done:** BaseDeConhecimentoModule live with DocumentIngestionService (PDF RAG ingestion), VectorSearchService (pgvector cosine), TemplateResolverService (3-tier IQI), MandatoryInfoResolverService (dedup). LlmModelConfig entity + migration + 4 model configs seeded. Ready for 04-02 AI classification.
 - **04-02 done:** IaModule live with ModelSelectorService (DB-driven multi-model routing + callWithFallback), PromptBuilderService (3 context-rich prompt builders), ComplaintParsingAgent (generateObject + Zod), DraftGeneratorAgent (generateText). Ready for 04-03 real skill dispatch.
+- **04-03 done:** ComplianceEvaluatorAgent + FinalResponseComposerAgent + TokenUsageTrackerService live. KbManagerController (POST /api/kb/upload, GET /api/kb/documents). TicketExecutionService.executeSkillStub replaced by async executeSkill routing 6 skills to real AI agents + token tracking. ExecucaoModule->IaModule wired, no circular deps. Ready for 04-04 (phase completion).
 
 ## Session Continuity
 
 Last session: 2026-03-18
-Stopped at: Completed 04-02-PLAN.md — IaModule + AI services (ModelSelector, PromptBuilder, ComplaintParsing, DraftGenerator)
+Stopped at: Completed 04-03-PLAN.md — AI skill dispatch integration (ComplianceEvaluator, FinalResponseComposer, TokenUsageTracker, KbManagerController, real executeSkill)
 Resume file: None
