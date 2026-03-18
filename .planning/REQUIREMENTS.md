@@ -133,48 +133,48 @@
 
 ### Memory & Learning
 
-- [ ] **MEM-01**: Memoria de caso (reclamacao original, decisao, resposta final, desfecho)
-- [ ] **MEM-02**: Memoria de correcao humana (texto IA, texto humano, diff, motivo, tipo)
-- [ ] **MEM-03**: Memoria de estilo (tom por tipologia, construcoes preferidas, expressoes proibidas)
-- [ ] **MEM-04**: Busca de casos similares na nova execucao
-- [ ] **MEM-05**: Busca de correcoes humanas similares
-- [ ] **MEM-06**: Sugestao de padroes de resposta aprovados
+- [x] **MEM-01**: Memoria de caso (reclamacao original, decisao, resposta final, desfecho)
+- [x] **MEM-02**: Memoria de correcao humana (texto IA, texto humano, diff, motivo, tipo)
+- [x] **MEM-03**: Memoria de estilo (tom por tipologia, construcoes preferidas, expressoes proibidas)
+- [x] **MEM-04**: Busca de casos similares na nova execucao
+- [x] **MEM-05**: Busca de correcoes humanas similares
+- [x] **MEM-06**: Sugestao de padroes de resposta aprovados
 
 ### Personas
 
-- [ ] **PERS-01**: Cadastro governado de personas (nome, tipologia, formalidade, empatia, assertividade)
-- [ ] **PERS-02**: Persona define estrutura de resposta, expressoes obrigatorias e proibidas
-- [ ] **PERS-03**: Personas pre-configuradas: Cobranca (objetiva), Portabilidade (explicativa), Qualidade (empatica), Cancelamento (defensavel)
+- [x] **PERS-01**: Cadastro governado de personas (nome, tipologia, formalidade, empatia, assertividade)
+- [x] **PERS-02**: Persona define estrutura de resposta, expressoes obrigatorias e proibidas
+- [x] **PERS-03**: Personas pre-configuradas: Cobranca (objetiva), Portabilidade (explicativa), Qualidade (empatica), Cancelamento (defensavel)
 
 ### Configuration & Admin
 
-- [ ] **CONF-01**: Cadastro de personas
-- [ ] **CONF-02**: Cadastro de templates de resposta
-- [ ] **CONF-03**: Cadastro de steps
-- [ ] **CONF-04**: Cadastro de skills
-- [ ] **CONF-05**: Cadastro de capabilities
-- [ ] **CONF-06**: Configuracao de modelos LLM (provider, modelo, custo, uso por funcionalidade)
-- [ ] **CONF-07**: Todas configuracoes editaveis sem recompilar aplicacao
+- [x] **CONF-01**: Cadastro de personas
+- [x] **CONF-02**: Cadastro de templates de resposta
+- [x] **CONF-03**: Cadastro de steps
+- [x] **CONF-04**: Cadastro de skills
+- [x] **CONF-05**: Cadastro de capabilities
+- [x] **CONF-06**: Configuracao de modelos LLM (provider, modelo, custo, uso por funcionalidade)
+- [x] **CONF-07**: Todas configuracoes editaveis sem recompilar aplicacao
 
 ### Observability & Audit
 
-- [ ] **OBS-01**: Logs por ticket (etapa, skill, duracao, status, erro, prompt id, modelo, tokens, custo)
-- [ ] **OBS-02**: Painel de tempo medio por etapa
-- [ ] **OBS-03**: Painel de custo medio por ticket
-- [ ] **OBS-04**: Painel de taxa de erro por skill
-- [ ] **OBS-05**: Painel de etapas com maior intervencao humana
-- [ ] **OBS-06**: Painel de tipologias com maior risco regulatorio
-- [ ] **OBS-07**: Painel de tokens e custos
-- [ ] **OBS-08**: Trace Explorer para debug ponta a ponta
-- [ ] **OBS-09**: Score de conformidade por ticket (aderencia, completude, linguagem, risco)
+- [x] **OBS-01**: Logs por ticket (etapa, skill, duracao, status, erro, prompt id, modelo, tokens, custo)
+- [x] **OBS-02**: Painel de tempo medio por etapa
+- [x] **OBS-03**: Painel de custo medio por ticket
+- [x] **OBS-04**: Painel de taxa de erro por skill
+- [x] **OBS-05**: Painel de etapas com maior intervencao humana
+- [x] **OBS-06**: Painel de tipologias com maior risco regulatorio
+- [x] **OBS-07**: Painel de tokens e custos
+- [x] **OBS-08**: Trace Explorer para debug ponta a ponta
+- [x] **OBS-09**: Score de conformidade por ticket (aderencia, completude, linguagem, risco)
 
 ### Security & LGPD
 
-- [ ] **SEC-01**: Mascaramento de CPF/telefone no frontend
-- [ ] **SEC-02**: Segregacao de perfis (operador, supervisor, admin)
-- [ ] **SEC-03**: Redaction em logs de prompt (dados sensiveis)
-- [ ] **SEC-04**: Trilha de acesso auditavel
-- [ ] **SEC-05**: Versionamento de prompts e templates
+- [x] **SEC-01**: Mascaramento de CPF/telefone no frontend
+- [x] **SEC-02**: Segregacao de perfis (operador, supervisor, admin)
+- [x] **SEC-03**: Redaction em logs de prompt (dados sensiveis)
+- [x] **SEC-04**: Trilha de acesso auditavel
+- [x] **SEC-05**: Versionamento de prompts e templates
 
 ### Artifacts
 
@@ -326,36 +326,36 @@
 | DSGN-07 | Phase 6 | Complete |
 | DSGN-08 | Phase 6 | Complete |
 | DSGN-09 | Phase 6 | Complete |
-| MEM-01 | Phase 7 | Pending |
-| MEM-02 | Phase 7 | Pending |
-| MEM-03 | Phase 7 | Pending |
-| MEM-04 | Phase 7 | Pending |
-| MEM-05 | Phase 7 | Pending |
-| MEM-06 | Phase 7 | Pending |
-| PERS-01 | Phase 7 | Pending |
-| PERS-02 | Phase 7 | Pending |
-| PERS-03 | Phase 7 | Pending |
-| CONF-01 | Phase 7 | Pending |
-| CONF-02 | Phase 7 | Pending |
-| CONF-03 | Phase 7 | Pending |
-| CONF-04 | Phase 7 | Pending |
-| CONF-05 | Phase 7 | Pending |
-| CONF-06 | Phase 7 | Pending |
-| CONF-07 | Phase 7 | Pending |
-| OBS-01 | Phase 7 | Pending |
-| OBS-02 | Phase 7 | Pending |
-| OBS-03 | Phase 7 | Pending |
-| OBS-04 | Phase 7 | Pending |
-| OBS-05 | Phase 7 | Pending |
-| OBS-06 | Phase 7 | Pending |
-| OBS-07 | Phase 7 | Pending |
-| OBS-08 | Phase 7 | Pending |
-| OBS-09 | Phase 7 | Pending |
-| SEC-01 | Phase 7 | Pending |
-| SEC-02 | Phase 7 | Pending |
-| SEC-03 | Phase 7 | Pending |
-| SEC-04 | Phase 7 | Pending |
-| SEC-05 | Phase 7 | Pending |
+| MEM-01 | Phase 7 | Complete |
+| MEM-02 | Phase 7 | Complete |
+| MEM-03 | Phase 7 | Complete |
+| MEM-04 | Phase 7 | Complete |
+| MEM-05 | Phase 7 | Complete |
+| MEM-06 | Phase 7 | Complete |
+| PERS-01 | Phase 7 | Complete |
+| PERS-02 | Phase 7 | Complete |
+| PERS-03 | Phase 7 | Complete |
+| CONF-01 | Phase 7 | Complete |
+| CONF-02 | Phase 7 | Complete |
+| CONF-03 | Phase 7 | Complete |
+| CONF-04 | Phase 7 | Complete |
+| CONF-05 | Phase 7 | Complete |
+| CONF-06 | Phase 7 | Complete |
+| CONF-07 | Phase 7 | Complete |
+| OBS-01 | Phase 7 | Complete |
+| OBS-02 | Phase 7 | Complete |
+| OBS-03 | Phase 7 | Complete |
+| OBS-04 | Phase 7 | Complete |
+| OBS-05 | Phase 7 | Complete |
+| OBS-06 | Phase 7 | Complete |
+| OBS-07 | Phase 7 | Complete |
+| OBS-08 | Phase 7 | Complete |
+| OBS-09 | Phase 7 | Complete |
+| SEC-01 | Phase 7 | Complete |
+| SEC-02 | Phase 7 | Complete |
+| SEC-03 | Phase 7 | Complete |
+| SEC-04 | Phase 7 | Complete |
+| SEC-05 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 111 total
