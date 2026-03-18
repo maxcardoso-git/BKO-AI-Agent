@@ -42,10 +42,11 @@ export function HitlEditor({ execId, stepExecId, complaintId, aiDraft, checklist
     existingReview?.checklistItems ?? {}
   )
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const submitAction = submitHumanReview.bind(null, execId, stepExecId, complaintId) as any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [state, formAction, isPending] = useActionState<ReviewActionState, FormData>(submitAction, {} as ReviewActionState)
+  const [state, formAction, isPending] = useActionState<ReviewActionState, FormData>(
+    (_prev: ReviewActionState, formData: FormData) =>
+      submitHumanReview(execId, stepExecId, complaintId, _prev, formData),
+    {}
+  )
 
   const isAlreadyApproved = existingReview?.status === 'approved'
 
