@@ -8,6 +8,8 @@ import { StepTransitionRule } from './entities/step-transition-rule.entity';
 import { SkillDefinition } from './entities/skill-definition.entity';
 import { StepSkillBinding } from './entities/step-skill-binding.entity';
 import { RegulatoryOrchestrationService } from './services/regulatory-orchestration.service';
+import { StepsDesignerService } from './services/steps-designer.service';
+import { StepsDesignerController } from './controllers/steps-designer.controller';
 
 @Module({
   imports: [
@@ -21,7 +23,8 @@ import { RegulatoryOrchestrationService } from './services/regulatory-orchestrat
     ]),
     RegulatorioModule,
   ],
-  providers: [RegulatoryOrchestrationService],
-  exports: [TypeOrmModule, RegulatoryOrchestrationService],
+  controllers: [StepsDesignerController],
+  providers: [RegulatoryOrchestrationService, StepsDesignerService],
+  exports: [TypeOrmModule, RegulatoryOrchestrationService, StepsDesignerService],
 })
 export class OrquestracaoModule {}
