@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BaseDeConhecimentoModule } from '../base-de-conhecimento/base-de-conhecimento.module';
 import { RegulatorioModule } from '../regulatorio/regulatorio.module';
@@ -15,7 +15,7 @@ import { TokenUsageTrackerService } from './services/token-usage-tracker.service
 @Module({
   imports: [
     TypeOrmModule.forFeature([LlmCall, TokenUsage]), // direct import avoids circular dep with ExecucaoModule
-    BaseDeConhecimentoModule, // provides LlmModelConfig repo, VectorSearchService, TemplateResolverService, MandatoryInfoResolverService
+    forwardRef(() => BaseDeConhecimentoModule), // forwardRef: IaModule -> BDCM -> MemoriaModule -> forwardRef(IaModule)
     RegulatorioModule,        // provides Persona repo (for future persona-based prompt building)
   ],
   providers: [
