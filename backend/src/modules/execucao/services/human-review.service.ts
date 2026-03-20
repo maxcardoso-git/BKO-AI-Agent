@@ -1,4 +1,5 @@
 import { Injectable, HttpException } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HumanReview, HumanReviewStatus } from '../entities/human-review.entity';
@@ -53,6 +54,8 @@ export class HumanReviewService {
     private readonly stepDefinitionRepo: Repository<StepDefinition>,
 
     private readonly memoryFeedback: MemoryFeedbackService,
+
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   /**
@@ -197,9 +200,15 @@ export class HumanReviewService {
 
             // Fire-and-forget: continue auto-advance for remaining steps
             if (nextStep) {
-              // Lazy-load ticketExecutionService to avoid circular dependency
-              // Instead, emit an event or use setImmediate to trigger the loop externally
-              // For now, we handle the state transition here and leave remaining steps for manual advance
+              // Auto-advance remaining steps after human approval
+              setImmediate(async () => {
+                try {
+                  const svc = this.moduleRef.get('TicketExecutionService', { strict: false });
+                  if (svc?.autoAdvanceLoop) await svc.autoAdvanceLoop(execution.id);
+                } catch (e) {
+                  console.error('[HumanReview] auto-advance failed:', e);
+                }
+              });
             }
           }
         }

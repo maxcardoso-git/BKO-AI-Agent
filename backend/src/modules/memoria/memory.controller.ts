@@ -39,6 +39,7 @@ export class MemoryController {
 
     const items = await this.caseRepo.find({
       where: showAll ? {} : { isActive: true },
+      relations: ['complaint'],
       order: { createdAt: 'DESC' },
       skip: (pageNum - 1) * limitNum,
       take: limitNum,
@@ -50,6 +51,10 @@ export class MemoryController {
       tipologiaId: c.tipologyId,
       summaryText: c.summary,
       approvedResponseText: c.responseSnippet,
+      outcome: c.outcome,
+      decision: c.decision,
+      protocolNumber: c.complaint?.protocolNumber ?? null,
+      modalidade: c.complaint?.modalidade ?? null,
       isActive: c.isActive,
       createdAt: c.createdAt,
     }));
