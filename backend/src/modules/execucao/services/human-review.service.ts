@@ -2,7 +2,9 @@ import { Injectable, HttpException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HumanReview, HumanReviewStatus } from '../entities/human-review.entity';
-import { StepExecution } from '../entities/step-execution.entity';
+import { StepExecution, StepExecutionStatus } from '../entities/step-execution.entity';
+import { TicketExecution, TicketExecutionStatus } from '../entities/ticket-execution.entity';
+import { StepDefinition } from '../../orquestracao/entities/step-definition.entity';
 import { Artifact } from '../entities/artifact.entity';
 import { diffWords } from 'diff';
 import { SubmitReviewDto } from '../dto/submit-review.dto';
@@ -44,6 +46,12 @@ export class HumanReviewService {
     @InjectRepository(StepExecution)
     private readonly stepExecRepo: Repository<StepExecution>,
 
+    @InjectRepository(TicketExecution)
+    private readonly ticketExecRepo: Repository<TicketExecution>,
+
+    @InjectRepository(StepDefinition)
+    private readonly stepDefinitionRepo: Repository<StepDefinition>,
+
     private readonly memoryFeedback: MemoryFeedbackService,
   ) {}
 
@@ -74,6 +82,10 @@ export class HumanReviewService {
     reviewerUserId: string,
     dto: SubmitReviewDto,
   ): Promise<HumanReview> {
+    // Normalize field names: frontend sends humanFinal/checklist; legacy sends humanFinalText/checklistItems
+    const humanFinalText = dto.humanFinal ?? dto.humanFinalText ?? null;
+    const checklistItems = dto.checklist ?? dto.checklistItems ?? null;
+
     // 1. Load ART-09 (final_response) to get aiGeneratedText
     const finalResponseArtifact = await this.artifactRepo.findOne({
       where: { complaintId, artifactType: 'final_response' },
@@ -84,7 +96,6 @@ export class HumanReviewService {
 
     // 2. Compute diff if human edited the text
     let diffSummary: string | null = null;
-    const humanFinalText = dto.humanFinalText ?? null;
 
     if (humanFinalText && humanFinalText !== aiGeneratedText) {
       const changes = diffWords(aiGeneratedText, humanFinalText);
@@ -115,11 +126,11 @@ export class HumanReviewService {
         humanFinalText,
         diffSummary,
         correctionReason: dto.correctionReason ?? null,
-        checklistItems: dto.checklistItems ?? null,
+        checklistItems: checklistItems ?? null,
         observations: dto.observations ?? null,
         checklistCompleted:
-          dto.checklistItems != null &&
-          Object.keys(dto.checklistItems).length > 0,
+          checklistItems != null &&
+          Object.keys(checklistItems).length > 0,
         reviewedAt: dto.approved ? new Date() : null,
       }),
     );
@@ -141,7 +152,63 @@ export class HumanReviewService {
       await this.artifactRepo.save(humanDiffArtifact);
     }
 
-    // 5. Fire-and-forget: persist human feedback for future memory retrieval (MEM-04)
+    // 5. If approved, resume execution: mark step as completed and advance to next step
+    if (dto.approved) {
+      try {
+        const stepExec = await this.stepExecRepo.findOne({ where: { id: stepExecutionId } });
+        if (stepExec && stepExec.status === StepExecutionStatus.WAITING_HUMAN) {
+          stepExec.status = StepExecutionStatus.COMPLETED;
+          stepExec.completedAt = new Date();
+          stepExec.output = {
+            finalResponse: humanFinalText ?? aiGeneratedText,
+            source: 'human_approved',
+            aiDraft: aiGeneratedText,
+          };
+          await this.stepExecRepo.save(stepExec);
+
+          // Resume ticket_execution: advance to next step
+          const execution = await this.ticketExecRepo.findOne({
+            where: { id: stepExec.ticketExecutionId },
+          });
+          if (execution && execution.status === TicketExecutionStatus.PAUSED_HUMAN) {
+            const steps = await this.stepDefinitionRepo.find({
+              where: { capabilityVersionId: execution.capabilityVersionId, isActive: true },
+              order: { stepOrder: 'ASC' },
+            });
+            const currentIdx = steps.findIndex((s) => s.key === execution.currentStepKey);
+            const nextStep = steps[currentIdx + 1] ?? null;
+
+            // Accumulate output in metadata
+            const meta = (execution.metadata ?? {}) as Record<string, unknown>;
+            const stepOutputs = ((meta.stepOutputs ?? {}) as Record<string, unknown>);
+            stepOutputs[execution.currentStepKey!] = stepExec.output;
+            meta.stepOutputs = stepOutputs;
+
+            execution.status = TicketExecutionStatus.RUNNING;
+            execution.currentStepKey = nextStep?.key ?? null;
+            execution.metadata = meta;
+
+            if (!nextStep) {
+              execution.status = TicketExecutionStatus.COMPLETED;
+              execution.completedAt = new Date();
+            }
+
+            await this.ticketExecRepo.save(execution);
+
+            // Fire-and-forget: continue auto-advance for remaining steps
+            if (nextStep) {
+              // Lazy-load ticketExecutionService to avoid circular dependency
+              // Instead, emit an event or use setImmediate to trigger the loop externally
+              // For now, we handle the state transition here and leave remaining steps for manual advance
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[HumanReviewService] Failed to resume execution after review', err);
+      }
+    }
+
+    // 6. Fire-and-forget: persist human feedback for future memory retrieval (MEM-04)
     // Load stepExec to get tipologyId via ticketExecution.complaint relation
     const stepExecWithComplaint = await this.stepExecRepo.findOne({
       where: { id: stepExecutionId },

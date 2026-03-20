@@ -15,6 +15,9 @@ import { ResponseTemplate } from '../entities/response-template.entity';
 import { SkillDefinition } from '../../orquestracao/entities/skill-definition.entity';
 import { CapabilityVersion } from '../../orquestracao/entities/capability-version.entity';
 import { LlmModelConfig } from '../../base-de-conhecimento/entities/llm-model-config.entity';
+import { Tipology } from '../entities/tipology.entity';
+import { Subtipology } from '../entities/subtipology.entity';
+import { ServiceType } from '../entities/service-type.entity';
 
 @Controller()
 export class AdminConfigController {
@@ -130,5 +133,83 @@ export class AdminConfigController {
     @Body() body: Partial<LlmModelConfig>,
   ): Promise<LlmModelConfig> {
     return this.adminConfigService.updateModel(id, body);
+  }
+
+  // ─── Tipologias ───────────────────────────────────────────────────────────────
+  @Get('admin/tipologias')
+  @Roles(UserRole.ADMIN)
+  listTipologias(): Promise<Tipology[]> {
+    return this.adminConfigService.listTipologias();
+  }
+
+  @Post('admin/tipologias')
+  @Roles(UserRole.ADMIN)
+  createTipologia(@Body() body: Partial<Tipology>): Promise<Tipology> {
+    return this.adminConfigService.createTipologia(body);
+  }
+
+  @Patch('admin/tipologias/:id')
+  @Roles(UserRole.ADMIN)
+  updateTipologia(@Param('id') id: string, @Body() body: Partial<Tipology>): Promise<Tipology> {
+    return this.adminConfigService.updateTipologia(id, body);
+  }
+
+  @Delete('admin/tipologias/:id')
+  @Roles(UserRole.ADMIN)
+  async deleteTipologia(@Param('id') id: string): Promise<{ success: boolean }> {
+    await this.adminConfigService.deleteTipologia(id);
+    return { success: true };
+  }
+
+  // ─── Subtipologias ─────────────────────────────────────────────────────────────
+  @Get('admin/subtipologias')
+  @Roles(UserRole.ADMIN)
+  listSubtipologias(): Promise<Subtipology[]> {
+    return this.adminConfigService.listSubtipologias();
+  }
+
+  @Post('admin/subtipologias')
+  @Roles(UserRole.ADMIN)
+  createSubtipologia(@Body() body: Partial<Subtipology>): Promise<Subtipology> {
+    return this.adminConfigService.createSubtipologia(body);
+  }
+
+  @Patch('admin/subtipologias/:id')
+  @Roles(UserRole.ADMIN)
+  updateSubtipologia(@Param('id') id: string, @Body() body: Partial<Subtipology>): Promise<Subtipology> {
+    return this.adminConfigService.updateSubtipologia(id, body);
+  }
+
+  @Delete('admin/subtipologias/:id')
+  @Roles(UserRole.ADMIN)
+  async deleteSubtipologia(@Param('id') id: string): Promise<{ success: boolean }> {
+    await this.adminConfigService.deleteSubtipologia(id);
+    return { success: true };
+  }
+
+  // ─── ServiceTypes ─────────────────────────────────────────────────────────────
+  @Get('admin/service-types')
+  @Roles(UserRole.ADMIN)
+  listServiceTypes(): Promise<ServiceType[]> {
+    return this.adminConfigService.listServiceTypes();
+  }
+
+  @Post('admin/service-types')
+  @Roles(UserRole.ADMIN)
+  createServiceType(@Body() body: Partial<ServiceType>): Promise<ServiceType> {
+    return this.adminConfigService.createServiceType(body);
+  }
+
+  @Patch('admin/service-types/:id')
+  @Roles(UserRole.ADMIN)
+  updateServiceType(@Param('id') id: string, @Body() body: Partial<ServiceType>): Promise<ServiceType> {
+    return this.adminConfigService.updateServiceType(id, body);
+  }
+
+  @Delete('admin/service-types/:id')
+  @Roles(UserRole.ADMIN)
+  async deleteServiceType(@Param('id') id: string): Promise<{ success: boolean }> {
+    await this.adminConfigService.deleteServiceType(id);
+    return { success: true };
   }
 }

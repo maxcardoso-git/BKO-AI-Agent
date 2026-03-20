@@ -49,13 +49,21 @@ export class RegulatoryOrchestrationService {
 
   /**
    * Selects the active and current capability version for a given tipologyId.
-   * Throws 422 if no active capability exists for the tipology, or if no current+active version found.
+   * Falls back to a generic capability (tipologyId IS NULL) if no tipology-specific one exists.
+   * Throws 422 if no capability is found at all, or if no current+active version found.
    */
   async selectCapabilityVersion(tipologyId: string): Promise<CapabilityVersion> {
-    const capability = await this.capabilityRepo.findOne({
+    let capability = await this.capabilityRepo.findOne({
       where: { tipologyId, isActive: true },
       relations: ['versions'],
     });
+
+    if (!capability) {
+      capability = await this.capabilityRepo.findOne({
+        where: { tipologyId: null as any, isActive: true },
+        relations: ['versions'],
+      });
+    }
 
     if (!capability) {
       throw new HttpException(

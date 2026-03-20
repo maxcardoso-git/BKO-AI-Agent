@@ -69,6 +69,7 @@ export class DraftGeneratorAgent {
       consumerCpf,
       slaDeadline,
       slaBusinessDays,
+      analysisDate: new Date().toLocaleDateString('pt-BR'),
       kbChunks,
       template,
       mandatoryFields,

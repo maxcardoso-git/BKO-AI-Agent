@@ -90,7 +90,7 @@ export class FinalResponseComposerAgent {
           system,
           prompt: user,
           temperature: config.temperature,
-          maxOutputTokens: config.maxTokens ?? 4096,
+          maxOutputTokens: config.maxOutputTokens ?? 4096,
         });
         const latencyMs = Date.now() - startTime;
 

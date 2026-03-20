@@ -1,10 +1,33 @@
 import { DataSource } from 'typeorm';
 import { Seeder, SeederFactoryManager } from 'typeorm-extension';
 import { SkillDefinition } from '../../modules/orquestracao/entities/skill-definition.entity';
+import { Capability } from '../../modules/orquestracao/entities/capability.entity';
+import { CapabilityVersion } from '../../modules/orquestracao/entities/capability-version.entity';
 
 export default class OrquestracaoSeeder implements Seeder {
   async run(dataSource: DataSource, _factoryManager: SeederFactoryManager): Promise<void> {
     const skillRepo = dataSource.getRepository(SkillDefinition);
+    const capRepo = dataSource.getRepository(Capability);
+    const verRepo = dataSource.getRepository(CapabilityVersion);
+
+    // ─── Capability: Reclamação Anatel ──────────────────────────────────────
+    const existingCap = await capRepo.findOne({ where: { key: 'reclamacao_anatel' } });
+    if (!existingCap) {
+      const cap = await capRepo.save(capRepo.create({
+        key: 'reclamacao_anatel',
+        name: 'Reclamação Anatel',
+        description: 'Fluxo de tratamento de reclamações do portal Anatel (RA)',
+        isActive: true,
+      }));
+      await verRepo.save(verRepo.create({
+        capabilityId: cap.id,
+        version: 1,
+        description: 'Versão inicial do fluxo de reclamação Anatel',
+        isActive: true,
+        isCurrent: true,
+      }));
+    }
+    console.log('OrquestracaoSeeder: capability reclamacao_anatel seeded.');
 
     const skills = [
       {

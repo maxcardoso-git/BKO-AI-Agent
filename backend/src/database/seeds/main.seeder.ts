@@ -6,6 +6,7 @@ import OrquestracaoSeeder from './orquestracao.seeder';
 import PersonaSeeder from './persona.seeder';
 import RegulatorioSeeder from './regulatorio.seeder';
 import UserSeeder from './user.seeder';
+import { ServiceTypeSeeder } from './service-type.seeder';
 
 export default class MainSeeder implements Seeder {
   async run(
@@ -18,6 +19,7 @@ export default class MainSeeder implements Seeder {
     await new RegulatorioSeeder().run(dataSource, factoryManager);
     await new PersonaSeeder().run(dataSource, factoryManager);
     await new OrquestracaoSeeder().run(dataSource, factoryManager);
+    await new ServiceTypeSeeder().run(dataSource);
     await new ComplaintMockSeeder().run(dataSource, factoryManager);
     await new LlmModelConfigSeeder().run(dataSource, factoryManager);
 

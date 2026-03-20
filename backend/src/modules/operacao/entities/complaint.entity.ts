@@ -103,10 +103,6 @@ export class Complaint {
   @Column({ type: 'varchar', nullable: true })
   perfilResponsavel: string | null;
 
-  /** Resposta enviada pela operadora à Anatel */
-  @Column({ type: 'text', nullable: true })
-  resposta: string | null;
-
   /** Nome do cliente reclamante */
   @Column({ type: 'varchar', nullable: true })
   clienteNome: string | null;
@@ -142,6 +138,236 @@ export class Complaint {
   /** Campos adicionais Anatel em JSON (motivos, situação focus, retido, etc.) */
   @Column({ type: 'jsonb', nullable: true })
   anatelMetadata: Record<string, unknown> | null;
+
+  /** Subserviço: ex "Conta/Cobrança", "Dados e Voz movel" */
+  @Column({ type: 'varchar', nullable: true })
+  subservico: string | null;
+
+  /** Email do cliente */
+  @Column({ type: 'varchar', nullable: true })
+  clienteEmail: string | null;
+
+  /** CEP do cliente */
+  @Column({ type: 'varchar', nullable: true })
+  clienteCep: string | null;
+
+  /** Bairro do cliente */
+  @Column({ type: 'varchar', nullable: true })
+  clienteBairro: string | null;
+
+  /** Endereço do cliente */
+  @Column({ type: 'varchar', nullable: true })
+  clienteEndereco: string | null;
+
+  /** Quantidade de reaberturas */
+  @Column({ type: 'int', nullable: true })
+  qtdReabertura: number | null;
+
+  /** Retido (cliente foi retido?) */
+  @Column({ type: 'boolean', nullable: true })
+  retido: boolean | null;
+
+  /** Motivo da retenção */
+  @Column({ type: 'varchar', nullable: true })
+  motivoRetencao: string | null;
+
+  /** Situação Focus */
+  @Column({ type: 'varchar', nullable: true })
+  situacaoFocus: string | null;
+
+  /** "A reclamação foi considerada": "Procedente com contato", "Improcedente com contato", etc. */
+  @Column({ type: 'varchar', nullable: true })
+  reclamacaoConsiderada: string | null;
+
+  /** Satisfação do cliente */
+  @Column({ type: 'varchar', nullable: true })
+  satisfacaoCliente: string | null;
+
+  /** Reclamação resolvida? */
+  @Column({ type: 'boolean', nullable: true })
+  resolvido: boolean | null;
+
+  /** Selo GOV BR */
+  @Column({ type: 'varchar', nullable: true })
+  seloGovBr: string | null;
+
+  /** Motivo Reclamação 1/2/3 */
+  @Column({ type: 'varchar', nullable: true })
+  motivoReclamacao1: string | null;
+  @Column({ type: 'varchar', nullable: true })
+  motivoReclamacao2: string | null;
+  @Column({ type: 'varchar', nullable: true })
+  motivoReclamacao3: string | null;
+
+  /** Motivo Problema 1/2/3 */
+  @Column({ type: 'varchar', nullable: true })
+  motivoProblema1: string | null;
+  @Column({ type: 'varchar', nullable: true })
+  motivoProblema2: string | null;
+  @Column({ type: 'varchar', nullable: true })
+  motivoProblema3: string | null;
+
+  /** Motivo Solução 1/2/3 */
+  @Column({ type: 'varchar', nullable: true })
+  motivoSolucao1: string | null;
+  @Column({ type: 'varchar', nullable: true })
+  motivoSolucao2: string | null;
+  @Column({ type: 'varchar', nullable: true })
+  motivoSolucao3: string | null;
+
+  /** Data Resposta */
+  @Column({ type: 'timestamp', nullable: true })
+  dataResposta: Date | null;
+
+  /** Número CRM da prestadora */
+  @Column({ type: 'varchar', nullable: true })
+  numeroCrm: string | null;
+
+  /** Service ID externo */
+  @Column({ type: 'varchar', nullable: true })
+  serviceId: string | null;
+
+  // --- Campos adicionais Anatel ---
+
+  /** IdtSolicitação — ID da solicitação Anatel */
+  @Column({ type: 'varchar', nullable: true })
+  idtSolicitacao: string | null;
+
+  /** ID Instância */
+  @Column({ type: 'varchar', nullable: true })
+  idInstancia: string | null;
+
+  /** ID Tarefa */
+  @Column({ type: 'varchar', nullable: true })
+  idTarefa: string | null;
+
+  /** Data de Documento */
+  @Column({ type: 'timestamp', nullable: true })
+  dataDocumento: Date | null;
+
+  /** Data Evento */
+  @Column({ type: 'timestamp', nullable: true })
+  dataEvento: Date | null;
+
+  /** Primeiro Serviço — serviço no momento do cadastro original */
+  @Column({ type: 'varchar', nullable: true })
+  primeiroServico: string | null;
+
+  /** Responsável Tabulação D0 */
+  @Column({ type: 'varchar', nullable: true })
+  responsavelTabulacaoD0: string | null;
+
+  /** Data Tabulação D0 */
+  @Column({ type: 'timestamp', nullable: true })
+  dataTabulacaoD0: Date | null;
+
+  /** Telefone Contato Fixo */
+  @Column({ type: 'varchar', nullable: true })
+  telefoneContatoFixo: string | null;
+
+  /** Telefone Reclamado */
+  @Column({ type: 'varchar', nullable: true })
+  telefoneReclamado: string | null;
+
+  /** CPF/CNPJ Cliente */
+  @Column({ type: 'varchar', nullable: true })
+  cpfCnpjCliente: string | null;
+
+  /** CPF/CNPJ Assinante */
+  @Column({ type: 'varchar', nullable: true })
+  cpfCnpjAssinante: string | null;
+
+  /** Nome Assinante (titular da linha) */
+  @Column({ type: 'varchar', nullable: true })
+  nomeAssinante: string | null;
+
+  /** Responsável — atendente */
+  @Column({ type: 'varchar', nullable: true })
+  responsavel: string | null;
+
+  /** Supervisor */
+  @Column({ type: 'varchar', nullable: true })
+  supervisor: string | null;
+
+  /** Coordenador */
+  @Column({ type: 'varchar', nullable: true })
+  coordenador: string | null;
+
+  /** Justificativa da resposta */
+  @Column({ type: 'text', nullable: true })
+  justificativa: string | null;
+
+  /** Situação Anatel: "Aberta", "Fechado" */
+  @Column({ type: 'varchar', nullable: true })
+  situacaoAnatel: string | null;
+
+  /** Pendência Futura */
+  @Column({ type: 'varchar', nullable: true })
+  pendenciaFutura: string | null;
+
+  /** Motivo Pendência Futura */
+  @Column({ type: 'varchar', nullable: true })
+  motivoPendenciaFutura: string | null;
+
+  /** Data Pendência Futura */
+  @Column({ type: 'timestamp', nullable: true })
+  dataPendenciaFutura: Date | null;
+
+  /** Status Processo Anatel: "Finalizado", "Em andamento" */
+  @Column({ type: 'varchar', nullable: true })
+  statusProcesso: string | null;
+
+  /** Data Ida */
+  @Column({ type: 'timestamp', nullable: true })
+  dataIda: Date | null;
+
+  /** Motivo Reincidente */
+  @Column({ type: 'varchar', nullable: true })
+  motivoReincidente: string | null;
+
+  /** Detalhamento Motivo Reincidente */
+  @Column({ type: 'varchar', nullable: true })
+  detalhamentoMotivoReincidente: string | null;
+
+  /** Última Iteração — protocolo da iteração anterior */
+  @Column({ type: 'varchar', nullable: true })
+  ultimaIteracao: string | null;
+
+  /** Avaliação qualitativa */
+  @Column({ type: 'varchar', nullable: true })
+  avaliacao: string | null;
+
+  /** Realizar Incentivo */
+  @Column({ type: 'varchar', nullable: true })
+  realizarIncentivo: string | null;
+
+  /** Telefone WhatsApp */
+  @Column({ type: 'varchar', nullable: true })
+  telefoneWhatsapp: string | null;
+
+  /** Id Pronta Para Contato */
+  @Column({ type: 'varchar', nullable: true })
+  idProntaParaContato: string | null;
+
+  /** Data Envio Pode Falar Agora */
+  @Column({ type: 'timestamp', nullable: true })
+  dataEnvioPodeFalarAgora: Date | null;
+
+  /** Data Retorno Falar Agora */
+  @Column({ type: 'timestamp', nullable: true })
+  dataRetornoFalarAgora: Date | null;
+
+  /** Retorno em Horário Operacional */
+  @Column({ type: 'varchar', nullable: true })
+  retornoHorarioOperacional: string | null;
+
+  /** Retorno Falar Agora */
+  @Column({ type: 'varchar', nullable: true })
+  retornoFalarAgora: string | null;
+
+  /** Cliente Favorável? */
+  @Column({ type: 'varchar', nullable: true })
+  clienteFavoravel: string | null;
 
   @ManyToOne(() => Tipology, { nullable: true, eager: false })
   @JoinColumn({ name: 'tipologyId' })

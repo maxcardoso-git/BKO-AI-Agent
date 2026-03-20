@@ -9,6 +9,7 @@ import { StyleMemory } from './entities/style-memory.entity';
 import { IaModule } from '../ia/ia.module';
 import { MemoryRetrievalService } from './services/memory-retrieval.service';
 import { MemoryFeedbackService } from './services/memory-feedback.service';
+import { MemoryController } from './memory.controller';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { MemoryFeedbackService } from './services/memory-feedback.service';
     ]),
     forwardRef(() => IaModule), // forwardRef breaks circular: MemoriaModule -> IaModule -> BaseDeConhecimentoModule -> MemoriaModule
   ],
+  controllers: [MemoryController],
   providers: [MemoryRetrievalService, MemoryFeedbackService],
   exports: [MemoryRetrievalService, MemoryFeedbackService, TypeOrmModule],
 })

@@ -24,6 +24,13 @@ export class ExecutionController {
     return this.executionService.findArtifactsByComplaintId(complaintId);
   }
 
+  @Get('executions/:execId/artifacts')
+  findArtifactsByExecution(
+    @Param('complaintId', ParseUUIDPipe) complaintId: string,
+  ): Promise<Artifact[]> {
+    return this.executionService.findArtifactsByComplaintId(complaintId);
+  }
+
   @Get('logs')
   findLogs(
     @Param('complaintId', ParseUUIDPipe) complaintId: string,

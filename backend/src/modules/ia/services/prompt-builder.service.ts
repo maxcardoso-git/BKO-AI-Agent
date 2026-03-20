@@ -14,6 +14,7 @@ export interface PromptContext {
   protocoloPrestadora?: string | null;
   consumerName?: string;
   consumerCpf?: string | null;
+  analysisDate?: string;
   kbChunks?: VectorSearchResult[];
   template?: ResolvedTemplate | null;
   mandatoryFields?: ResolvedMandatoryField[];
@@ -98,7 +99,7 @@ export class PromptBuilderService {
         '## Legenda dos placeholders:',
         '- {{nome_reclamante}} = nome do assinante (se disponivel) ou "Consumidor"',
         '- {{numero_protocolo}} = numero do protocolo Anatel da reclamacao',
-        '- {{data_reclamacao}} = data de abertura da reclamacao (extraia do contexto ou use "data nao informada")',
+        '- {{data_reclamacao}} = data de abertura da reclamacao se disponivel; caso contrario, use a data de analise fornecida nos dados abaixo',
         '- {{providencia_adotada}} = descreva objetivamente a acao tomada pela operadora',
         '- {{status_cobranca}} = "confirmada e o estorno sera processado" ou "contestada" conforme o caso',
         '- {{prazo_estorno}} = numero de dias uteis para o credito (padrao: 5 a 10 dias uteis)',
@@ -160,6 +161,7 @@ export class PromptBuilderService {
       `- Tipologia: ${ctx.tipologyName ?? ctx.tipologyKey}`,
       `- Situacao: ${ctx.situationKey ?? 'N/A'}`,
       `- Prazo SLA: ${ctx.slaDeadline ?? 'N/A'} (${ctx.slaBusinessDays ?? '?'} dias uteis)`,
+      `- Data de analise (hoje): ${ctx.analysisDate ?? new Date().toLocaleDateString('pt-BR')}`,
       `- Consumidor: ${ctx.consumerName ?? 'Nao identificado no arquivo'}`,
       ...(ctx.consumerCpf ? [`- CPF/CNPJ: ${ctx.consumerCpf}`] : []),
       '',

@@ -164,7 +164,6 @@ export class StepsDesignerService {
     return this.dataSource.transaction(async (manager) => {
       const repo = manager.getRepository(StepTransitionRule);
 
-      // Delete existing rules for this step
       await repo.delete({ stepDefinitionId: stepId });
 
       if (transitions.length === 0) {
@@ -181,6 +180,114 @@ export class StepsDesignerService {
           description: t.description ?? null,
         }),
       );
+
+      return repo.save(newRules);
+    });
+  }
+
+  // ─── Version-centric endpoints (used by Steps Designer UI) ───────────────
+
+  /**
+   * Returns flat list of capability versions as selectors for the UI dropdown.
+   */
+  async listVersionSelectors(): Promise<
+    { id: string; capabilityKey: string; capabilityName: string; version: number; description: string | null; isActive: boolean }[]
+  > {
+    const caps = await this.capabilityRepo
+      .createQueryBuilder('cap')
+      .leftJoinAndSelect('cap.versions', 'ver')
+      .orderBy('cap.name', 'ASC')
+      .addOrderBy('ver.version', 'DESC')
+      .getMany();
+
+    return caps.flatMap((cap) =>
+      cap.versions.map((ver) => ({
+        id: ver.id,
+        capabilityKey: cap.key,
+        capabilityName: cap.name,
+        version: ver.version,
+        description: ver.description,
+        isActive: ver.isActive,
+      })),
+    );
+  }
+
+  /**
+   * Returns a capability version with its steps (ordered by stepOrder).
+   */
+  async getVersionWithSteps(verId: string): Promise<CapabilityVersion> {
+    return this.getCapabilityVersion(verId);
+  }
+
+  /**
+   * Returns all transitions for all steps in a version, enriched with fromStepKey.
+   */
+  async getVersionTransitions(
+    verId: string,
+  ): Promise<(StepTransitionRule & { fromStepKey: string })[]> {
+    const steps = await this.stepDefRepo.find({
+      where: { capabilityVersionId: verId },
+    });
+
+    const stepIds = steps.map((s) => s.id);
+    if (stepIds.length === 0) return [];
+
+    const stepKeyMap = new Map(steps.map((s) => [s.id, s.key]));
+
+    const transitions = await this.stepTransitionRuleRepo
+      .createQueryBuilder('tr')
+      .where('tr.stepDefinitionId IN (:...ids)', { ids: stepIds })
+      .orderBy('tr.priority', 'ASC')
+      .getMany();
+
+    return transitions.map((t) => ({
+      ...t,
+      fromStepKey: stepKeyMap.get(t.stepDefinitionId) ?? '',
+    }));
+  }
+
+  /**
+   * Replaces all transitions for a version.
+   * Accepts flat list with fromStepKey + targetStepKey.
+   */
+  async updateVersionTransitions(
+    verId: string,
+    transitions: { fromStepKey: string; targetStepKey: string; conditionType: string; conditionExpression?: Record<string, unknown>; priority?: number }[],
+  ): Promise<StepTransitionRule[]> {
+    const steps = await this.stepDefRepo.find({
+      where: { capabilityVersionId: verId },
+    });
+
+    const stepIdMap = new Map(steps.map((s) => [s.key, s.id]));
+
+    return this.dataSource.transaction(async (manager) => {
+      const repo = manager.getRepository(StepTransitionRule);
+
+      // Delete all existing transitions for this version's steps
+      const stepIds = steps.map((s) => s.id);
+      if (stepIds.length > 0) {
+        await repo
+          .createQueryBuilder()
+          .delete()
+          .where('stepDefinitionId IN (:...ids)', { ids: stepIds })
+          .execute();
+      }
+
+      if (transitions.length === 0) return [];
+
+      const newRules = transitions
+        .map((t) => {
+          const stepDefinitionId = stepIdMap.get(t.fromStepKey);
+          if (!stepDefinitionId) return null;
+          return repo.create({
+            stepDefinitionId,
+            targetStepKey: t.targetStepKey,
+            conditionType: t.conditionType,
+            conditionExpression: t.conditionExpression ?? {},
+            priority: t.priority ?? 0,
+          });
+        })
+        .filter((r): r is StepTransitionRule => r !== null);
 
       return repo.save(newRules);
     });

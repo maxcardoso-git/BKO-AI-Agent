@@ -31,10 +31,20 @@ export class LlmModelConfig {
   temperature: number;
 
   @Column({ type: 'int', nullable: true })
-  maxTokens: number | null;
+  maxOutputTokens: number | null;
+
+  @Column({ type: 'float', default: 0 })
+  costPerInputToken: number;
+
+  @Column({ type: 'float', default: 0 })
+  costPerOutputToken: number;
 
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
+
+  // FK to resource (API key / credentials)
+  @Column({ type: 'uuid', nullable: true })
+  resourceId: string | null;
 
   // Self-referencing FK for fallback chain
   @Column({ type: 'uuid', nullable: true })

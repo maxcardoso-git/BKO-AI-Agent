@@ -6,6 +6,9 @@ import { ResponseTemplate } from '../entities/response-template.entity';
 import { SkillDefinition } from '../../orquestracao/entities/skill-definition.entity';
 import { CapabilityVersion } from '../../orquestracao/entities/capability-version.entity';
 import { LlmModelConfig } from '../../base-de-conhecimento/entities/llm-model-config.entity';
+import { Tipology } from '../entities/tipology.entity';
+import { Subtipology } from '../entities/subtipology.entity';
+import { ServiceType } from '../entities/service-type.entity';
 
 @Injectable()
 export class AdminConfigService {
@@ -20,6 +23,12 @@ export class AdminConfigService {
     private readonly capabilityRepo: Repository<CapabilityVersion>,
     @InjectRepository(LlmModelConfig)
     private readonly modelRepo: Repository<LlmModelConfig>,
+    @InjectRepository(Tipology)
+    private tipologyRepo: Repository<Tipology>,
+    @InjectRepository(Subtipology)
+    private subtipologyRepo: Repository<Subtipology>,
+    @InjectRepository(ServiceType)
+    private serviceTypeRepo: Repository<ServiceType>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
   ) {}
@@ -84,8 +93,16 @@ export class AdminConfigService {
 
   // ─── Capabilities ─────────────────────────────────────────────────────────
 
-  listCapabilities(): Promise<CapabilityVersion[]> {
-    return this.capabilityRepo.find({ order: { createdAt: 'DESC' } });
+  async listCapabilities(): Promise<(CapabilityVersion & { capabilityKey: string; capabilityName: string })[]> {
+    const versions = await this.capabilityRepo.find({
+      relations: ['capability'],
+      order: { createdAt: 'DESC' },
+    });
+    return versions.map((v) => ({
+      ...v,
+      capabilityKey: v.capability?.key ?? '',
+      capabilityName: v.capability?.name ?? '',
+    }));
   }
 
   async updateCapability(id: string, dto: Partial<CapabilityVersion>): Promise<CapabilityVersion> {
@@ -106,6 +123,63 @@ export class AdminConfigService {
   async updateModel(id: string, dto: Partial<LlmModelConfig>): Promise<LlmModelConfig> {
     const existing = await this.modelRepo.findOneOrFail({ where: { id } });
     return this.modelRepo.save({ ...existing, ...dto });
+  }
+
+  // ─── Tipologias ───────────────────────────────────────────────────────────────
+
+  listTipologias(): Promise<Tipology[]> {
+    return this.tipologyRepo.find({ order: { label: 'ASC' } });
+  }
+
+  async createTipologia(dto: Partial<Tipology>): Promise<Tipology> {
+    return this.tipologyRepo.save(this.tipologyRepo.create(dto));
+  }
+
+  async updateTipologia(id: string, dto: Partial<Tipology>): Promise<Tipology> {
+    const e = await this.tipologyRepo.findOneOrFail({ where: { id } });
+    return this.tipologyRepo.save({ ...e, ...dto });
+  }
+
+  async deleteTipologia(id: string): Promise<void> {
+    await this.tipologyRepo.delete(id);
+  }
+
+  // ─── Subtipologias ─────────────────────────────────────────────────────────────
+
+  listSubtipologias(): Promise<Subtipology[]> {
+    return this.subtipologyRepo.find({ relations: ['tipology'], order: { label: 'ASC' } });
+  }
+
+  async createSubtipologia(dto: Partial<Subtipology>): Promise<Subtipology> {
+    return this.subtipologyRepo.save(this.subtipologyRepo.create(dto));
+  }
+
+  async updateSubtipologia(id: string, dto: Partial<Subtipology>): Promise<Subtipology> {
+    const e = await this.subtipologyRepo.findOneOrFail({ where: { id } });
+    return this.subtipologyRepo.save({ ...e, ...dto });
+  }
+
+  async deleteSubtipologia(id: string): Promise<void> {
+    await this.subtipologyRepo.delete(id);
+  }
+
+  // ─── ServiceTypes ─────────────────────────────────────────────────────────────
+
+  listServiceTypes(): Promise<ServiceType[]> {
+    return this.serviceTypeRepo.find({ relations: ['parent'], order: { label: 'ASC' } });
+  }
+
+  async createServiceType(dto: Partial<ServiceType>): Promise<ServiceType> {
+    return this.serviceTypeRepo.save(this.serviceTypeRepo.create(dto));
+  }
+
+  async updateServiceType(id: string, dto: Partial<ServiceType>): Promise<ServiceType> {
+    const e = await this.serviceTypeRepo.findOneOrFail({ where: { id } });
+    return this.serviceTypeRepo.save({ ...e, ...dto });
+  }
+
+  async deleteServiceType(id: string): Promise<void> {
+    await this.serviceTypeRepo.delete(id);
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────

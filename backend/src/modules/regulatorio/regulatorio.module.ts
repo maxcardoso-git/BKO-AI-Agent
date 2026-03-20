@@ -14,6 +14,7 @@ import { AdminConfigService } from './services/admin-config.service';
 import { SkillDefinition } from '../orquestracao/entities/skill-definition.entity';
 import { CapabilityVersion } from '../orquestracao/entities/capability-version.entity';
 import { LlmModelConfig } from '../base-de-conhecimento/entities/llm-model-config.entity';
+import { ServiceType } from './entities/service-type.entity';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { LlmModelConfig } from '../base-de-conhecimento/entities/llm-model-confi
       SkillDefinition,
       CapabilityVersion,
       LlmModelConfig,
+      ServiceType,
     ]),
   ],
   controllers: [TipologyController, AdminConfigController],

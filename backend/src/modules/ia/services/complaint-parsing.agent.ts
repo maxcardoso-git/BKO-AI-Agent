@@ -70,7 +70,7 @@ export class ComplaintParsingAgent {
           system,
           prompt: user,
           temperature: config.temperature,
-          maxOutputTokens: config.maxTokens ?? 1024,
+          maxOutputTokens: config.maxOutputTokens ?? 1024,
         });
         const latencyMs = Date.now() - startTime;
 
