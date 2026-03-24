@@ -102,6 +102,41 @@ export class SkillRegistryService {
         case 'ValidateCancelamento':
           return this.validateCancelamento(input);
 
+        case 'RetrieveDiscounts': {
+          const protocolNumber = (input['protocolNumber'] as string) ?? '';
+          const discounts = await this.dataSource.query(
+            'SELECT * FROM discount WHERE "protocolNumber" = $1 ORDER BY "activatedAt" DESC',
+            [protocolNumber],
+          );
+          const artifact = await this.artifactRepo.save(
+            this.artifactRepo.create({
+              artifactType: 'applied_discounts',
+              content: {
+                protocolNumber,
+                discounts: discounts.map((d: any) => ({
+                  name: d.discountName,
+                  percent: d.discountPercent,
+                  validUntil: d.validUntil,
+                  loyaltyStart: d.loyaltyStartDate,
+                  loyaltyEnd: d.loyaltyEndDate,
+                  activatedAt: d.activatedAt,
+                })),
+                totalDiscountPercent: discounts.reduce((sum: number, d: any) => sum + d.discountPercent, 0),
+                hasActiveDiscounts: discounts.length > 0,
+              },
+              version: 1,
+              stepExecutionId,
+              complaintId,
+            }),
+          );
+          return {
+            discounts,
+            totalDiscountPercent: discounts.reduce((sum: number, d: any) => sum + d.discountPercent, 0),
+            hasActiveDiscounts: discounts.length > 0,
+            artifactId: artifact.id,
+          };
+        }
+
         // === Existing AI skills (Phase 4 — moved from TicketExecutionService) ===
         case 'ClassifyTypology': {
           const result = await this.complaintParser.classify(input);
