@@ -12,6 +12,7 @@ import { ComplaintService } from '../services/complaint.service';
 import { ComplaintFilterDto } from '../dto/complaint-filter.dto';
 import { ComplaintListResponse } from '../dto/complaint-list-response.dto';
 import { Complaint } from '../entities/complaint.entity';
+import { TimingMetricsDto } from '../dto/timing-metrics.dto';
 import { SensitiveDataInterceptor } from '../../../interceptors/sensitive-data.interceptor';
 
 @UseInterceptors(SensitiveDataInterceptor)
@@ -28,5 +29,10 @@ export class ComplaintController {
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Complaint> {
     return this.complaintService.findOne(id);
+  }
+
+  @Get(':id/timing')
+  getTiming(@Param('id', ParseUUIDPipe) id: string): Promise<TimingMetricsDto> {
+    return this.complaintService.getTimingMetrics(id);
   }
 }
