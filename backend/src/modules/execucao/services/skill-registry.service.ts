@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { Artifact } from '../entities/artifact.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { Complaint } from '../../operacao/entities/complaint.entity';
+import { ComplaintUserNote } from '../../operacao/entities/complaint-user-note.entity';
+import { TicketTimingEvent } from '../../operacao/entities/ticket-timing-event.entity';
 import { Persona } from '../../regulatorio/entities/persona.entity';
 import { CaseMemory } from '../../memoria/entities/case-memory.entity';
 import { HumanFeedbackMemory } from '../../memoria/entities/human-feedback-memory.entity';
@@ -88,6 +90,12 @@ export class SkillRegistryService {
 
     // Memory retrieval (MEM-01..MEM-06)
     private readonly memoryRetrieval: MemoryRetrievalService,
+
+    @InjectRepository(ComplaintUserNote)
+    private readonly complaintUserNoteRepo: Repository<ComplaintUserNote>,
+
+    @InjectRepository(TicketTimingEvent)
+    private readonly ticketTimingEventRepo: Repository<TicketTimingEvent>,
   ) {}
 
   /**
@@ -408,6 +416,39 @@ export class SkillRegistryService {
     });
     if (!complaint) return { error: 'Complaint not found', complaintId };
 
+    // PIPE-02: Load latest active operator note (most recent version)
+    const latestNote = await this.complaintUserNoteRepo.findOne({
+      where: { complaintId: complaint.id, isActive: true },
+      order: { version: 'DESC' },
+    });
+
+    // PIPE-02: Compose enrichedText: rawText alone when no note; rawText + delimiter + note when present
+    const enrichedText = latestNote
+      ? `${complaint.rawText}\n\n[NOTA OPERADOR]:\n${latestNote.content}`
+      : complaint.rawText;
+
+    // Persist enrichedText back onto complaint so other consumers can read it without re-running the skill
+    if (complaint.enrichedText !== enrichedText) {
+      complaint.enrichedText = enrichedText;
+      await this.complaintRepo.save(complaint);
+    }
+
+    // AUDIT-TIMING-05: Emit ticket_created on first LoadComplaint run for this complaint (idempotent)
+    const existingEvent = await this.ticketTimingEventRepo.findOne({
+      where: { complaintId: complaint.id, milestone: 'ticket_created' },
+    });
+    if (!existingEvent) {
+      await this.ticketTimingEventRepo.save(
+        this.ticketTimingEventRepo.create({
+          complaintId: complaint.id,
+          milestone: 'ticket_created',
+          occurredAt: complaint.createdAt ?? new Date(),
+          userId: null,
+          executionId: null,
+        }),
+      );
+    }
+
     const artifact = await this.artifactRepo.save(
       this.artifactRepo.create({
         artifactType: 'parsed_complaint',
@@ -415,6 +456,8 @@ export class SkillRegistryService {
           id: complaint.id,
           protocolNumber: complaint.protocolNumber,
           rawText: complaint.rawText,
+          enrichedText,                       // PIPE-02
+          operatorNote: latestNote?.content ?? null,
           tipologyKey: complaint.tipology?.key ?? null,
           situationKey: complaint.situation?.key ?? null,
           source: complaint.source,
@@ -438,6 +481,10 @@ export class SkillRegistryService {
       situationId: complaint.situationId,
       tipologyKey: complaint.tipology?.key ?? null,
       rawText: complaint.rawText,
+      enrichedText,                  // PIPE-02
+      operatorNote: latestNote?.content ?? null,    // PIPE-02 — surface raw note for DraftFinalResponse
+      operatorNoteParameters: latestNote?.parameters ?? null,
+      operatorNoteVersion: latestNote?.version ?? null,
       artifactId: artifact.id,
     };
   }
@@ -734,7 +781,13 @@ Situacao atual: ${situationKey ?? 'nao informada'}`;
     };
   }
 
-  /** SKLL-11: BuildMandatoryChecklist — mandatory info resolver, persist ART-06 mandatory_checklist */
+  /**
+   * SKLL-11: BuildMandatoryChecklist — mandatory info resolver, persist ART-06 mandatory_checklist
+   *
+   * PIPE-05: This skill operates strictly off tipologyId + situationId via mandatoryInfoResolver.
+   * It does NOT read invoice or discount data, so it remains tolerant of the v2 simplified pipeline
+   * (retrieve_discounts/retrieve_invoices steps deactivated) without any further changes.
+   */
   private async buildMandatoryChecklist(
     input: Record<string, unknown>,
     stepExecutionId: string,
