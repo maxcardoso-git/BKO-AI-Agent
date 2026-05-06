@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 ## Current Position
 
 Phase: 9 — Operator UI, Token Auth & RBAC
-Plan: 0 of 4 (ready to plan)
-Status: Phase 8 complete — ready for 09 planning
-Last activity: 2026-05-06 — Completed Phase 8 (all 3 plans: schema migrations, pipeline simplification, timing service + endpoint + prompt)
+Plan: 1 of 4 (in progress)
+Status: In progress — 09-01 complete
+Last activity: 2026-05-06 — Completed 09-01 (backend token auth, lock, notes, RBAC)
 
-Progress: v1 [██████████] 100% (23/23 plans) | v2 [███░░░░░░░] 33% (3/9 plans)
+Progress: v1 [██████████] 100% (23/23 plans) | v2 [████░░░░░░] 44% (4/9 plans)
 
 ## Performance Metrics
 
@@ -147,6 +147,10 @@ Recent decisions affecting current work:
 - 08-02: RetrieveDiscounts/RetrieveInvoices skill code KEPT in skill-registry.service.ts — PIPE-04 historical audit preservation
 - 08-02: ticket_created event uses complaint.createdAt as occurredAt — backfills correct timestamp for existing complaints
 - 08-02: Remote DB at 72.61.52.70:5433 used via .env; local Docker postgres exists but is secondary
+- 09-01: AccessTokenService registered in both AuthModule and OperacaoModule — each module has its own TypeOrmModule.forFeature([AccessToken])
+- 09-01: TicketLockService uses DataSource.transaction() with DELETE+INSERT — never plain save() on unique complaintId
+- 09-01: ComplaintUserNoteService emits note_saved outside transaction with try/catch — timing event failure is non-fatal
+- 09-01: GET /api/executions/:execId/steps restricted to SUPERVISOR/ADMIN via @Roles — OPERATOR gets 403 from global RolesGuard
 
 ### v2 Context
 
@@ -168,6 +172,6 @@ None at v2 start.
 
 ## Session Continuity
 
-Last session: 2026-05-06T19:30:00Z
-Stopped at: Completed Phase 8 (08-03) — ready to plan Phase 9
+Last session: 2026-05-06T20:30:00Z
+Stopped at: Completed 09-01-PLAN.md — backend token auth, lock, notes, RBAC
 Resume file: None
