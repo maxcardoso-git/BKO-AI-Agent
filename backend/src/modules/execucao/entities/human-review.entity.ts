@@ -15,6 +15,7 @@ export enum HumanReviewStatus {
   APPROVED = 'approved',
   REJECTED = 'rejected',
   REVISION_REQUESTED = 'revision_requested',
+  CORRECTED = 'corrected',
 }
 
 @Entity('human_review')
@@ -25,11 +26,7 @@ export class HumanReview {
   @Column({ type: 'varchar' })
   reviewerUserId: string;
 
-  @Column({
-    type: 'enum',
-    enum: HumanReviewStatus,
-    default: HumanReviewStatus.PENDING,
-  })
+  @Column({ type: 'varchar', default: HumanReviewStatus.PENDING })
   status: HumanReviewStatus;
 
   @Column({ type: 'text' })
@@ -43,6 +40,9 @@ export class HumanReview {
 
   @Column({ type: 'text', nullable: true })
   correctionReason: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  rejectionReason: string | null;
 
   @Column({ type: 'boolean', default: false })
   checklistCompleted: boolean;

@@ -369,6 +369,11 @@ export class Complaint {
   @Column({ type: 'varchar', nullable: true })
   clienteFavoravel: string | null;
 
+  /** Texto enriquecido com a nota do operador (rawText + nota mais recente).
+   *  Populado pela skill LoadComplaint quando há complaint_user_note ativa. (SCHEMA-02) */
+  @Column({ type: 'text', nullable: true })
+  enrichedText: string | null;
+
   @ManyToOne(() => Tipology, { nullable: true, eager: false })
   @JoinColumn({ name: 'tipologyId' })
   tipology: Tipology | null;
