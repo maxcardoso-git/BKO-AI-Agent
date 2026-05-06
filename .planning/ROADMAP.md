@@ -13,7 +13,7 @@ BKO Agent is built in ten phases following the natural dependency order of the s
 - [x] **Phase 5: Skills Pipeline** - All 19 skills implemented and registered; end-to-end execution with artifact production
 - [x] **Phase 6: Human Review Pipeline** - HITL editor, step processor UI, artifact viewer, diff capture, steps designer
 - [x] **Phase 7: Polish & Compliance** - Memory & learning, personas, configuration admin, observability dashboards, security/LGPD hardening
-- [ ] **Phase 8: Schema & Pipeline Simplification** - DB migrations for operator note + human_review extensions; pipeline reduced to 14 steps; LoadComplaint and DraftFinalResponse updated to consume operator note
+- [x] **Phase 8: Schema & Pipeline Simplification** - DB migrations for operator note + human_review extensions; pipeline reduced to 14 steps; LoadComplaint and DraftFinalResponse updated to consume operator note
 - [ ] **Phase 9: Operator UI & RBAC** - `/processar` screen with note-taking, search, progress tracking; sidebar routing rules per role
 - [ ] **Phase 10: Validation UI & Training Memory** - `/processar/:protocolo/validar` approve/correct/reject flow; feedback persisted to HumanFeedbackMemory; admin feedback audit page
 
@@ -142,56 +142,63 @@ Plans:
 ## Milestone v2 — Operator Workflow
 
 ### Phase 8: Schema & Pipeline Simplification
-**Goal**: The database has the new operator note table and human_review enum extensions, and the pipeline runs 14 steps cleanly without relying on invoice or discount data
+**Goal**: The database has all v2 tables (operator note, access_token, ticket_timing_event, ticket_lock) and human_review extensions; the pipeline runs 14 steps cleanly without invoice/discount data; timing events are recorded for every milestone
 **Depends on**: Phase 7 (v1 complete)
-**Requirements**: SCHEMA-01, SCHEMA-02, SCHEMA-03, SCHEMA-04, PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05
+**Requirements**: SCHEMA-01, SCHEMA-02, SCHEMA-03, SCHEMA-04, PIPE-01, PIPE-02, PIPE-03, PIPE-04, PIPE-05, AUTH-TOKEN-01, AUDIT-TIMING-01, AUDIT-TIMING-02, AUDIT-TIMING-05, LOCK-01
 **Success Criteria** (what must be TRUE):
-  1. Migration runs cleanly: `complaint_user_note` table exists with all columns and FKs; `enrichedText` column exists on complaint; human_review status enum includes `rejected` and `corrected`; `rejectionReason` column exists on human_review
-  2. A 14-step capability is configured and executes end-to-end without calling `retrieve_discounts` or `retrieve_invoices` steps
-  3. LoadComplaint skill output includes `enrichedText` (rawText + last active operator note) when a note exists; falls back to rawText when no note is present
-  4. DraftFinalResponse skill receives operator note content in its LLM prompt context and produces a draft that reflects it
-  5. BuildMandatoryChecklist skill completes without error when invoice/discount fields are absent from the execution context
+  1. Migration runs cleanly: `complaint_user_note`, `access_token`, `ticket_timing_event`, `ticket_lock` tables exist; `enrichedText` and `rejectionReason` columns exist; HumanReviewStatus enum includes `rejected` and `corrected`
+  2. 14-step capability executes end-to-end without calling `retrieve_discounts` or `retrieve_invoices`
+  3. LoadComplaint skill output includes `enrichedText` (rawText + last active note) with graceful fallback
+  4. DraftFinalResponse receives operator note content in LLM prompt and produces a draft that reflects it
+  5. `ticket_timing_event` rows are persisted automatically at: ticket_created, note_saved, execution_started, paused_human, decision_made, approved, completed
+  6. `GET /api/complaints/:id/timing` returns calculated metrics (tempo_total, tempo_sla, tempo_revisao_humana, tempo_nota_a_processamento, tempo_aprovacao_a_conclusao)
 **Plans**: 3 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — TypeORM migrations: `complaint_user_note` entity + migration, `enrichedText` column migration on complaint, human_review status enum extension + `rejectionReason` column migration; ComplaintUserNote NestJS entity wired into MemoriaModule (or OperacaoModule)
-- [ ] 08-02-PLAN.md — Pipeline update: remove `retrieve_discounts` / `retrieve_invoices` step definitions from capability seed; update LoadComplaint skill to read last active note and merge into `enrichedText`; update BuildMandatoryChecklist skill to not require invoice/discount fields
-- [ ] 08-03-PLAN.md — DraftFinalResponse prompt context update: inject operator note text into PromptBuilderService draft builder; end-to-end smoke test with a 14-step capability run
+- [x] 08-01-PLAN.md — TypeORM migrations + entities: `complaint_user_note`, `access_token`, `ticket_timing_event`, `ticket_lock`; `enrichedText` and `rejectionReason` columns; module wiring (OperacaoModule, ExecucaoModule)
+- [x] 08-02-PLAN.md — Pipeline simplification: deactivate `retrieve_discounts`/`retrieve_invoices` step definitions (UPDATE isActive=false); update LoadComplaint skill to read latest active note + emit enrichedText + emit timing event; ensure BuildMandatoryChecklist tolerates missing invoice/discount fields
+- [x] 08-03-PLAN.md — DraftFinalResponse prompt context (inject operator note via PromptBuilderService); TimingEventService + auto-instrumentation in TicketExecutionService (lifecycle events); GET /api/complaints/:id/timing endpoint; smoke test for 14-step run
 
-### Phase 9: Operator UI & RBAC
-**Goal**: Operators have a dedicated `/processar` screen to search for a complaint by protocol, fill in a structured note, and start processing with a visible progress indicator; sidebar routing enforces role boundaries
+### Phase 9: Operator UI, Token Auth & RBAC
+**Goal**: Operators access `/processar` via personal token (no login screen), search complaints by protocol, take an exclusive lock, fill the structured note, and start processing with a visible progress indicator; admin manages tokens; sidebar routing enforces role boundaries
 **Depends on**: Phase 8
-**Requirements**: OPUI-01, OPUI-02, OPUI-03, OPUI-04, OPUI-05, OPUI-06, OPUI-07, OPUI-08, OPUI-09, RBAC-01, RBAC-02, RBAC-03, RBAC-04
+**Requirements**: OPUI-01, OPUI-02, OPUI-03, OPUI-04, OPUI-05, OPUI-06, OPUI-07, OPUI-08, OPUI-09, RBAC-01, RBAC-02, RBAC-03, RBAC-04, AUTH-TOKEN-02, AUTH-TOKEN-03, AUTH-TOKEN-04, AUTH-TOKEN-05, AUTH-TOKEN-06, AUTH-TOKEN-07, LOCK-02, LOCK-03, LOCK-04, LOCK-05
 **Success Criteria** (what must be TRUE):
-  1. Sidebar shows `/processar` for OPERATOR, SUPERVISOR, and ADMIN; sidebar shows `/tickets` only for SUPERVISOR and ADMIN; OPERATOR lands on `/processar` after login
-  2. Operator can search by Anatel protocol (15 digits) or internal protocol (TRAINING-XXXX, ANT-XXXX-XXXX) and see the complaint header (protocol, tipologia, SLA, risk indicator, raw text)
-  3. Operator can fill and save the structured note (plano contratado, valor cobrado, motivo declarado, data ocorrência, observação adicional) as a draft before starting processing; saving creates a new version each time
-  4. Clicking "Iniciar Processamento" validates that at least one note field is filled, persists the note, calls `startExecution`, and shows a progress bar (0/14 → 14/14) that advances as steps complete
-  5. OPERATOR profile receives 403 when accessing `/tickets/[id]/execution/[execId]` directly
-**Plans**: 3 plans
+  1. New users get a token auto-generated on creation; admin can issue new tokens and revoke existing ones at `/admin/tokens` (list with user, expiresAt, lastUsedAt, isActive)
+  2. URL `/processar?token=XXX` validates token, creates session, redirects to `/processar` (token removed from URL); expired/invalid token shows "Token expirado, contate o administrador"
+  3. Sidebar shows `/processar` for OPERATOR, SUPERVISOR, ADMIN; `/tickets` only for SUPERVISOR/ADMIN; OPERATOR lands on `/processar` after token auth
+  4. Operator searches by Anatel or internal protocol and sees complaint header (protocol, tipologia, SLA, risk, raw text); search auto-creates lock for current user (TTL 30min)
+  5. Another user trying to access locked ticket sees "Ticket sendo tratado por {nome} desde {hora}"; SUPERVISOR/ADMIN can force-release
+  6. Operator fills/saves structured note as draft (plano, valor, motivo, data, observação); saving creates new version + emits `note_saved` timing event
+  7. Clicking "Iniciar Processamento" validates note, persists, calls `startExecution`, displays 0/14 → 14/14 progress; lock renews on each action
+  8. OPERATOR receives 403 on `/tickets/[id]/execution/[execId]` direct access
+**Plans**: 4 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — Backend: ComplaintUserNoteController + ComplaintUserNoteService (upsert with version increment, get-latest, get-history); BFF endpoint to look up complaint by Anatel or internal protocol; RBAC guard update for /tickets/[id]/execution/[execId] to return 403 for OPERATOR
-- [ ] 09-02-PLAN.md — Frontend RBAC: update sidebar to show/hide items by role; set OPERATOR default redirect to `/processar` after login; add 403 guard on execution page for OPERATOR role
-- [ ] 09-03-PLAN.md — Frontend `/processar` page: protocol search bar, complaint header card, structured note form (controlled fields + textarea), save-as-draft button, "Iniciar Processamento" button with validation, step progress bar component using SSE or polling
+- [ ] 09-01-PLAN.md — Backend Token & Lock: AccessTokenController + AccessTokenService (generate on user create, list, revoke, validate); TokenAuthGuard middleware for `/processar?token=XXX`; TicketLockService (acquire/renew/release/force-release); ComplaintUserNoteController + Service (upsert with version, history); protocol-lookup endpoint; RBAC guard for execution page (403 for OPERATOR)
+- [ ] 09-02-PLAN.md — Frontend RBAC + Token Auth: sidebar by role; OPERATOR default redirect to `/processar`; token auth flow page (validates `?token=` then redirects); 403 guard on execution page; error page for expired token
+- [ ] 09-03-PLAN.md — Frontend `/processar` page: protocol search bar (Anatel + internal); complaint header card; lock acquisition + visual lock-conflict UI; structured note form; save-as-draft + "Iniciar Processamento" buttons with validation; progress bar component (polling)
+- [ ] 09-04-PLAN.md — Admin token management UI: `/admin/tokens` page with table (user, token preview, expiresAt, lastUsedAt, isActive), "Novo Token" modal (select user + TTL), "Revogar" action; `/admin/locks` table for supervisors with force-release
 
-### Phase 10: Validation UI & Training Memory
-**Goal**: After the pipeline pauses for human review, operators are routed to a validation screen where they can approve, correct, or reject the AI draft; every decision feeds HumanFeedbackMemory to improve future generations; admin can audit all feedback
+### Phase 10: Validation UI, Training Memory & Audit Reports
+**Goal**: After the pipeline pauses for human review, operators are routed to a validation screen where they approve/correct/reject the AI draft (releasing the ticket lock); every decision feeds HumanFeedbackMemory + ticket_timing_event for AI training and audit reporting; admin can audit feedback and timing metrics
 **Depends on**: Phase 9
-**Requirements**: VALUI-01, VALUI-02, VALUI-03, VALUI-04, VALUI-05, VALUI-06, VALUI-07, TRAIN-01, TRAIN-02, TRAIN-03, TRAIN-04, TRAIN-05
+**Requirements**: VALUI-01, VALUI-02, VALUI-03, VALUI-04, VALUI-05, VALUI-06, VALUI-07, TRAIN-01, TRAIN-02, TRAIN-03, TRAIN-04, TRAIN-05, AUDIT-TIMING-03, AUDIT-TIMING-04
 **Success Criteria** (what must be TRUE):
-  1. When the pipeline reaches `paused_human`, the browser automatically redirects to `/processar/:protocolo/validar` with the AI draft pre-loaded in an editable editor alongside the conformance score, template used, KB chunks, and operator note
-  2. Clicking "Aprovar" finalizes the execution with human_review status `approved`; clicking "Corrigir" requires a non-empty correction reason and finalizes with status `corrected`; clicking "Reprovar" opens a modal requiring a non-empty rejection reason and sets execution status to `cancelled`
-  3. After rejection, the operator can update the note and start a new execution from `/processar` without navigating away
-  4. Every correction persists to `human_feedback_memory` with `feedbackType: 'correction'` and an embedding of the original AI text; every rejection persists with `feedbackType: 'rejection'` and an embedding of the rejected text; both are retrievable by tipologia
-  5. DraftFinalResponse skill injects up to N similar approved corrections from `human_feedback_memory` into the LLM prompt, and the injected examples are visible in the validation screen's context panel
-  6. Admin can view all feedback entries at `/admin/feedback` filtered by tipologia (read-only list)
+  1. Pipeline pause auto-redirects to `/processar/:protocolo/validar` with AI draft pre-loaded + conformance score, template, KB chunks, operator note, and injected past corrections
+  2. Aprovar/Corrigir/Reprovar each produce correct human_review status, emit `decision_made` timing event with userId, finalize execution, release ticket lock, set ticket `responsavelFinal` to current user
+  3. Rejection allows operator to update note and start new execution from `/processar` without navigating away (note carries forward, lock re-acquired)
+  4. Every correction persists to `human_feedback_memory` with `feedbackType: 'correction'` + embedding; every rejection persists with `feedbackType: 'rejection'` + embedding; both retrievable by tipologia
+  5. DraftFinalResponse injects up to N similar past corrections into LLM prompt; injected examples visible in validation screen's context panel
+  6. `/admin/feedback` lists all feedback entries filterable by tipologia (read-only)
+  7. `/admin/audit/timings` shows ticket timing metrics (tempo total, tempo SLA, tempo revisão humana, tempo nota→processamento, tempo aprovação→conclusão); filters by tipologia, período, perfil
+  8. Observability dashboard shows new metric `human_review_avg_time` (média entre paused_human → decision_made)
 **Plans**: 3 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Backend: extend HumanReviewService to accept `approved`/`corrected`/`rejected` status; add `rejectionReason` to review DTO; add MemoryFeedbackService methods for correction + rejection embedding persistence; wire TRAIN-03 findSimilarFeedback to include `rejection` feedbackType; add GET /api/admin/feedback endpoint (ADMIN only)
-- [ ] 10-02-PLAN.md — DraftFinalResponse prompt update: call MemoryRetrievalService.findSimilarFeedback before generation; inject correction examples into PromptBuilderService draft context; expose injected examples in execution artifact output so UI can display them
-- [ ] 10-03-PLAN.md — Frontend: `/processar/:protocolo/validar` page with editable AI draft, conformance score, context panel (template / KB chunks / operator note / injected corrections), Approve/Correct/Reject action buttons, rejection modal; auto-redirect from `/processar` on `paused_human` status; `/admin/feedback` read-only list with tipologia filter
+- [ ] 10-01-PLAN.md — Backend: extend HumanReviewService for approved/corrected/rejected with timing event emission + lock release + responsavelFinal set; MemoryFeedbackService persistence with embeddings; GET /api/admin/feedback endpoint (ADMIN); GET /api/admin/audit/timings endpoint with filters; observability service adds human_review_avg_time metric
+- [ ] 10-02-PLAN.md — DraftFinalResponse prompt update: MemoryRetrievalService.findSimilarFeedback (correction + rejection), inject into PromptBuilderService draft context, expose injected examples in execution artifact output for UI display
+- [ ] 10-03-PLAN.md — Frontend: `/processar/:protocolo/validar` page (editable draft, conformance score, context panel, Aprovar/Corrigir/Reprovar with rejection modal); auto-redirect from `/processar` on paused_human; `/admin/feedback` read-only; `/admin/audit/timings` table with filters; observability panel update
 
 ## Progress
 

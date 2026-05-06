@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-04-10)
 
 **Core value:** Cada reclamacao tratada com conformidade regulatoria, artefatos rastreaveis, HITL obrigatorio, sem perder prazo
-**Current focus:** Milestone v2 - Operator Workflow — Phase 8: Schema & Pipeline Simplification
+**Current focus:** Milestone v2 - Operator Workflow — Phase 9: Operator UI, Token Auth & RBAC
 
 ## Current Position
 
-Phase: 8 — Schema & Pipeline Simplification
-Plan: 2 of 3 (08-02 complete)
-Status: In progress — ready for 08-03-PLAN.md
-Last activity: 2026-05-06 — Completed 08-02-PLAN.md (pipeline simplification: 16→14 steps, enrichedText, ticket_created event)
+Phase: 9 — Operator UI, Token Auth & RBAC
+Plan: 0 of 4 (ready to plan)
+Status: Phase 8 complete — ready for 09 planning
+Last activity: 2026-05-06 — Completed Phase 8 (all 3 plans: schema migrations, pipeline simplification, timing service + endpoint + prompt)
 
-Progress: v1 [██████████] 100% (23/23 plans) | v2 [██░░░░░░░░] 22% (2/9 plans)
+Progress: v1 [██████████] 100% (23/23 plans) | v2 [███░░░░░░░] 33% (3/9 plans)
 
 ## Performance Metrics
 
@@ -168,6 +168,6 @@ None at v2 start.
 
 ## Session Continuity
 
-Last session: 2026-05-06T18:54:00Z
-Stopped at: Completed 08-02-PLAN.md — ready to begin 08-03-PLAN.md
+Last session: 2026-05-06T19:30:00Z
+Stopped at: Completed Phase 8 (08-03) — ready to plan Phase 9
 Resume file: None
