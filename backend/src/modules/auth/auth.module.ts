@@ -5,6 +5,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../operacao/entities/user.entity';
+import { AccessToken } from '../operacao/entities/access-token.entity';
+import { AccessTokenService } from '../operacao/services/access-token.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
@@ -18,7 +20,7 @@ export { Public };
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, AccessToken]),
     PassportModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
@@ -33,6 +35,7 @@ export { Public };
   controllers: [AuthController],
   providers: [
     AuthService,
+    AccessTokenService,
     LocalStrategy,
     JwtStrategy,
     {
@@ -44,6 +47,6 @@ export { Public };
       useClass: RolesGuard,
     },
   ],
-  exports: [AuthService],
+  exports: [AuthService, AccessTokenService],
 })
 export class AuthModule {}
