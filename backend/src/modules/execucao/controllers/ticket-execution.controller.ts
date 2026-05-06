@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { TicketExecutionService } from '../services/ticket-execution.service';
 import { TicketExecution } from '../entities/ticket-execution.entity';
 import { StepExecution } from '../entities/step-execution.entity';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { UserRole } from '../../operacao/entities/user.entity';
 
 @Controller()
 export class TicketExecutionController {
@@ -36,8 +38,10 @@ export class TicketExecutionController {
   /**
    * GET /api/executions/:execId/steps
    * Returns all step executions for a given execution, ordered by createdAt.
+   * Restricted to SUPERVISOR and ADMIN — OPERATOR gets 403.
    */
   @Get('executions/:execId/steps')
+  @Roles(UserRole.SUPERVISOR, UserRole.ADMIN)
   async listSteps(@Param('execId') execId: string): Promise<StepExecution[]> {
     return this.stepExecutionRepo.find({
       where: { ticketExecutionId: execId },

@@ -96,6 +96,21 @@ export class ComplaintService {
     };
   }
 
+  /**
+   * Search complaints by protocolNumber OR protocoloPrestadora (case-insensitive LIKE).
+   */
+  async findByProtocol(q: string): Promise<Complaint[]> {
+    if (!q || q.trim().length === 0) return [];
+    const pattern = `%${q.trim()}%`;
+    return this.complaintRepository
+      .createQueryBuilder('complaint')
+      .where('LOWER(complaint.protocolNumber) LIKE LOWER(:pattern)', { pattern })
+      .orWhere('LOWER(complaint.protocoloPrestadora) LIKE LOWER(:pattern)', { pattern })
+      .orderBy('complaint.createdAt', 'DESC')
+      .take(50)
+      .getMany();
+  }
+
   async findOne(id: string): Promise<Complaint> {
     const complaint = await this.complaintRepository
       .createQueryBuilder('complaint')

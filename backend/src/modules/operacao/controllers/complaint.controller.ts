@@ -26,6 +26,12 @@ export class ComplaintController {
     return this.complaintService.findAll(filters);
   }
 
+  /** GET /api/complaints/by-protocol?q=XXX — search by protocol number */
+  @Get('by-protocol')
+  findByProtocol(@Query('q') q: string): Promise<Complaint[]> {
+    return this.complaintService.findByProtocol(q ?? '');
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string): Promise<Complaint> {
     return this.complaintService.findOne(id);

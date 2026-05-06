@@ -17,12 +17,14 @@ import { InvoiceService } from './services/invoice.service';
 import { TimingEventService } from './services/timing-event.service';
 import { AccessTokenService } from './services/access-token.service';
 import { TicketLockService } from './services/ticket-lock.service';
+import { ComplaintUserNoteService } from './services/complaint-user-note.service';
 import { ComplaintController } from './controllers/complaint.controller';
 import { DiscountController } from './controllers/discount.controller';
 import { InvoiceController } from './controllers/invoice.controller';
 import { AdminUsersController } from './controllers/admin-users.controller';
 import { AccessTokenController } from './controllers/access-token.controller';
 import { TicketLockController } from './controllers/ticket-lock.controller';
+import { ComplaintUserNoteController } from './controllers/complaint-user-note.controller';
 
 @Module({
   imports: [
@@ -40,8 +42,8 @@ import { TicketLockController } from './controllers/ticket-lock.controller';
       TicketTimingEvent,
     ]),
   ],
-  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController, TicketLockController],
-  providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService, AccessTokenService, TicketLockService],
+  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController, TicketLockController, ComplaintUserNoteController],
+  providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService, AccessTokenService, TicketLockService, ComplaintUserNoteService],
   exports: [TypeOrmModule, TimingEventService, AccessTokenService],
 })
 export class OperacaoModule {}
