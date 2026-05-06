@@ -6,10 +6,18 @@ import { ComplaintDetail } from './entities/complaint-detail.entity';
 import { ComplaintHistory } from './entities/complaint-history.entity';
 import { User } from './entities/user.entity';
 import { Discount } from './entities/discount.entity';
+import { Invoice } from './entities/invoice.entity';
+import { ComplaintUserNote } from './entities/complaint-user-note.entity';
+import { AccessToken } from './entities/access-token.entity';
+import { TicketLock } from './entities/ticket-lock.entity';
+import { TicketTimingEvent } from './entities/ticket-timing-event.entity';
 import { ComplaintService } from './services/complaint.service';
 import { DiscountService } from './services/discount.service';
+import { InvoiceService } from './services/invoice.service';
 import { ComplaintController } from './controllers/complaint.controller';
 import { DiscountController } from './controllers/discount.controller';
+import { InvoiceController } from './controllers/invoice.controller';
+import { AdminUsersController } from './controllers/admin-users.controller';
 
 @Module({
   imports: [
@@ -20,10 +28,15 @@ import { DiscountController } from './controllers/discount.controller';
       ComplaintAttachment,
       User,
       Discount,
+      Invoice,
+      ComplaintUserNote,
+      AccessToken,
+      TicketLock,
+      TicketTimingEvent,
     ]),
   ],
-  controllers: [ComplaintController, DiscountController],
-  providers: [ComplaintService, DiscountService],
+  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController],
+  providers: [ComplaintService, DiscountService, InvoiceService],
   exports: [TypeOrmModule],
 })
 export class OperacaoModule {}
