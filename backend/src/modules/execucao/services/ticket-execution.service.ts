@@ -12,6 +12,7 @@ import { AuditLog } from '../entities/audit-log.entity';
 import { RegulatoryOrchestrationService } from '../../orquestracao/services/regulatory-orchestration.service';
 import { SkillRegistryService } from './skill-registry.service';
 import { HitlPolicyService } from './human-review.service';
+import { TimingEventService } from '../../operacao/services/timing-event.service';
 
 interface ExecutionContext {
   tipologyKey: string;
@@ -55,6 +56,8 @@ export class TicketExecutionService {
     private readonly skillRegistry: SkillRegistryService,
 
     private readonly hitlPolicyService: HitlPolicyService,
+
+    private readonly timingEventService: TimingEventService,
   ) {}
 
   /**
@@ -139,6 +142,15 @@ export class TicketExecutionService {
     // 12. Save
     const saved = await this.ticketExecutionRepo.save(execution as TicketExecution);
 
+    // AUDIT-TIMING-05: lifecycle event — execution started (automatic, userId null)
+    await this.timingEventService.emit(
+      'execution_started',
+      complaintId,
+      saved.id,
+      null,
+      saved.startedAt ?? new Date(),
+    );
+
     // 13. Fire-and-forget audit log
     await this.auditLogRepo.save(
       this.auditLogRepo.create({
@@ -198,6 +210,10 @@ export class TicketExecutionService {
     executionId: string,
     operatorInput?: Record<string, unknown>,
   ): Promise<StepExecution> {
+    // NOTE (AUDIT-TIMING-05): decision_made/approved/completed events are emitted by Phase 10
+    // HumanReviewService when the operator submits a decision; not here.
+    // note_saved events are emitted by Phase 9 ComplaintUserNoteService.create() — not here.
+
     // 1. Load execution
     const execution = await this.ticketExecutionRepo.findOne({
       where: { id: executionId },
@@ -316,6 +332,14 @@ export class TicketExecutionService {
 
       complaint!.status = ComplaintStatus.WAITING_HUMAN;
       await this.complaintRepo.save(complaint!);
+
+      // AUDIT-TIMING-05: lifecycle event — paused for human review (automatic, userId null)
+      await this.timingEventService.emit(
+        'paused_human',
+        execution.complaintId,
+        execution.id,
+        null,
+      );
 
       return stepExec;
     }
