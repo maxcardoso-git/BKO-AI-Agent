@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 ## Current Position
 
 Phase: 8 — Schema & Pipeline Simplification
-Plan: 1 of 3 (08-01 complete)
-Status: In progress — ready for 08-02-PLAN.md
-Last activity: 2026-05-06 — Completed 08-01-PLAN.md (schema migrations for v2 operator workflow)
+Plan: 2 of 3 (08-02 complete)
+Status: In progress — ready for 08-03-PLAN.md
+Last activity: 2026-05-06 — Completed 08-02-PLAN.md (pipeline simplification: 16→14 steps, enrichedText, ticket_created event)
 
-Progress: v1 [██████████] 100% (23/23 plans) | v2 [█░░░░░░░░░] 11% (1/9 plans)
+Progress: v1 [██████████] 100% (23/23 plans) | v2 [██░░░░░░░░] 22% (2/9 plans)
 
 ## Performance Metrics
 
@@ -143,6 +143,10 @@ Recent decisions affecting current work:
 - 08-01: ticket_timing_event has no updatedAt — append-only immutability mirrors audit_log (decision 01-02)
 - 08-01: human_review.status source DDL was VARCHAR (Case A) — no ALTER TYPE needed; entity decorator switched from enum to varchar
 - 08-01: migration compilation requires `npx tsc -p tsconfig.build.json --rootDir src --outDir dist` (nest build excludes unreferenced migration files)
+- 08-02: Migration uses 4 LIKE patterns with LOWER() cast for case-insensitive step key matching (covers CamelCase + snake_case variants)
+- 08-02: RetrieveDiscounts/RetrieveInvoices skill code KEPT in skill-registry.service.ts — PIPE-04 historical audit preservation
+- 08-02: ticket_created event uses complaint.createdAt as occurredAt — backfills correct timestamp for existing complaints
+- 08-02: Remote DB at 72.61.52.70:5433 used via .env; local Docker postgres exists but is secondary
 
 ### v2 Context
 
@@ -164,6 +168,6 @@ None at v2 start.
 
 ## Session Continuity
 
-Last session: 2026-05-06T18:30:00Z
-Stopped at: Completed 08-01-PLAN.md — ready to begin 08-02-PLAN.md
+Last session: 2026-05-06T18:54:00Z
+Stopped at: Completed 08-02-PLAN.md — ready to begin 08-03-PLAN.md
 Resume file: None
