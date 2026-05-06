@@ -21,6 +21,9 @@ export interface PromptContext {
   personaTone?: string;
   personaInstructions?: string;
   previousStepOutputs?: Record<string, Record<string, unknown>>;
+  // PIPE-03: Operator note from complaint_user_note — populated by LoadComplaint skill
+  operatorNote?: string | null;
+  operatorNoteParameters?: Record<string, unknown> | null;
   // Memory-augmented context (MEM-01..MEM-06)
   similarCases?: Array<{ metadata: Record<string, unknown>; similarity: number }>;
   humanCorrections?: Array<{ aiText: string; humanText: string; diffDescription: string; similarity: number }>;
@@ -32,17 +35,23 @@ export class PromptBuilderService {
   /**
    * Builds a system prompt for complaint classification/parsing.
    */
-  buildClassificationPrompt(ctx: PromptContext): { system: string; user: string } {
-    const system = [
-      'Voce e um especialista em classificacao de reclamacoes de telecomunicacoes no contexto regulatorio da Anatel.',
-      'Sua tarefa e extrair dados estruturados da reclamacao do consumidor.',
-      '',
-      'Regras:',
-      '- Identifique a tipologia correta (cobranca, portabilidade, qualidade, cancelamento, etc.)',
-      '- Extraia os fatos-chave da reclamacao',
-      '- Avalie o nivel de urgencia/risco',
-      '- Responda APENAS com os dados estruturados solicitados',
-    ];
+  buildClassificationPrompt(ctx: PromptContext, customSystemPrompt?: string | null): { system: string; user: string } {
+    const system: string[] = [];
+
+    if (customSystemPrompt) {
+      system.push(customSystemPrompt);
+    } else {
+      system.push(
+        'Voce e um especialista em classificacao de reclamacoes de telecomunicacoes no contexto regulatorio da Anatel.',
+        'Sua tarefa e extrair dados estruturados da reclamacao do consumidor.',
+        '',
+        'Regras:',
+        '- Identifique a tipologia correta (cobranca, portabilidade, qualidade, cancelamento, etc.)',
+        '- Extraia os fatos-chave da reclamacao',
+        '- Avalie o nivel de urgencia/risco',
+        '- Responda APENAS com os dados estruturados solicitados',
+      );
+    }
 
     if (ctx.kbChunks && ctx.kbChunks.length > 0) {
       system.push('', '## Contexto regulatorio (Manual Anatel):');
@@ -64,20 +73,26 @@ export class PromptBuilderService {
   /**
    * Builds a system prompt for draft response generation.
    */
-  buildDraftResponsePrompt(ctx: PromptContext): { system: string; user: string } {
-    const system = [
-      'Voce e um redator especializado em respostas a reclamacoes de telecomunicacoes para a Anatel.',
-      'Sua tarefa e redigir uma resposta completa e em conformidade regulatoria.',
-      '',
-      'Diretrizes:',
-      '- A resposta deve ser clara, objetiva e profissional',
-      '- Deve enderecar todos os pontos da reclamacao do consumidor',
-      '- Deve citar as acoes tomadas pela operadora',
-      '- OBRIGATORIO: Quando um template IQI estiver disponivel, siga sua estrutura EXATAMENTE',
-      '- Preencha todos os {{placeholders}} com os dados reais fornecidos',
-      '- NAO adicione secoes que nao existam no template',
-      '- NAO omita secoes do template',
-    ];
+  buildDraftResponsePrompt(ctx: PromptContext, customSystemPrompt?: string | null): { system: string; user: string } {
+    const system: string[] = [];
+
+    if (customSystemPrompt) {
+      system.push(customSystemPrompt);
+    } else {
+      system.push(
+        'Voce e um redator especializado em respostas a reclamacoes de telecomunicacoes para a Anatel.',
+        'Sua tarefa e redigir uma resposta completa e em conformidade regulatoria.',
+        '',
+        'Diretrizes:',
+        '- A resposta deve ser clara, objetiva e profissional',
+        '- Deve enderecar todos os pontos da reclamacao do consumidor',
+        '- Deve citar as acoes tomadas pela operadora',
+        '- OBRIGATORIO: Quando um template IQI estiver disponivel, siga sua estrutura EXATAMENTE',
+        '- Preencha todos os {{placeholders}} com os dados reais fornecidos',
+        '- NAO adicione secoes que nao existam no template',
+        '- NAO omita secoes do template',
+      );
+    }
 
     if (ctx.personaTone) {
       system.push('', `## Tom e estilo: ${ctx.personaTone}`);
@@ -111,6 +126,25 @@ export class PromptBuilderService {
       system.push('', '## Itens obrigatorios que DEVEM constar na resposta:');
       for (const field of ctx.mandatoryFields) {
         system.push(`- ${field.fieldLabel}: ${field.description ?? field.fieldName}`);
+      }
+    }
+
+    // PIPE-03: Inject operator note as priority context — comes BEFORE kb chunks so the model
+    // sees the operator's brief first. The note may include structured parameters (plano, valor, etc.).
+    if (ctx.operatorNote && ctx.operatorNote.trim().length > 0) {
+      system.push(
+        '',
+        '## NOTA DO OPERADOR (contexto prioritario):',
+        'O operador analisou o ticket e registrou a seguinte informacao estruturada.',
+        'USE estes dados como base factual para a resposta. NAO invente valores nem datas que contradigam a nota.',
+        '',
+        ctx.operatorNote.trim(),
+      );
+      if (ctx.operatorNoteParameters && Object.keys(ctx.operatorNoteParameters).length > 0) {
+        system.push('', '## Parametros estruturados da nota:');
+        for (const [k, v] of Object.entries(ctx.operatorNoteParameters)) {
+          system.push(`- ${k}: ${JSON.stringify(v)}`);
+        }
       }
     }
 
@@ -183,17 +217,23 @@ export class PromptBuilderService {
   /**
    * Builds a system prompt for compliance evaluation.
    */
-  buildCompliancePrompt(ctx: PromptContext & { draftResponse: string }): { system: string; user: string } {
-    const system = [
-      'Voce e um auditor de conformidade regulatoria da Anatel.',
-      'Sua tarefa e avaliar se a resposta redigida atende todos os requisitos regulatorios.',
-      '',
-      'Criterios de avaliacao:',
-      '- Completude: todos os itens obrigatorios estao presentes?',
-      '- Aderencia: a resposta segue o Manual Anatel e o template IQI?',
-      '- Linguagem: o tom e apropriado e profissional?',
-      '- Prazo: ha referencia ao prazo e cumprimento do SLA?',
-    ];
+  buildCompliancePrompt(ctx: PromptContext & { draftResponse: string }, customSystemPrompt?: string | null): { system: string; user: string } {
+    const system: string[] = [];
+
+    if (customSystemPrompt) {
+      system.push(customSystemPrompt);
+    } else {
+      system.push(
+        'Voce e um auditor de conformidade regulatoria da Anatel.',
+        'Sua tarefa e avaliar se a resposta redigida atende todos os requisitos regulatorios.',
+        '',
+        'Criterios de avaliacao:',
+        '- Completude: todos os itens obrigatorios estao presentes?',
+        '- Aderencia: a resposta segue o Manual Anatel e o template IQI?',
+        '- Linguagem: o tom e apropriado e profissional?',
+        '- Prazo: ha referencia ao prazo e cumprimento do SLA?',
+      );
+    }
 
     if (ctx.mandatoryFields && ctx.mandatoryFields.length > 0) {
       system.push('', '## Itens obrigatorios a verificar:');

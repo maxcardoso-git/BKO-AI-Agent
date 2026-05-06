@@ -77,9 +77,13 @@ export class DraftGeneratorAgent {
       similarCases,
       humanCorrections,
       stylePatterns,
+      // PIPE-03: forward operator note from LoadComplaint skill output into prompt context
+      operatorNote: (input['operatorNote'] as string | null) ?? null,
+      operatorNoteParameters: (input['operatorNoteParameters'] as Record<string, unknown> | null) ?? null,
     };
 
-    const { system, user } = this.promptBuilder.buildDraftResponsePrompt(ctx);
+    const customSystemPrompt = input['customSystemPrompt'] as string | undefined;
+    const { system, user } = this.promptBuilder.buildDraftResponsePrompt(ctx, customSystemPrompt);
 
     // 5. Call LLM with fallback
     const result = await this.modelSelector.callWithFallback(
