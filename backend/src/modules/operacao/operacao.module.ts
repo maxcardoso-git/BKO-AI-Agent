@@ -15,10 +15,12 @@ import { ComplaintService } from './services/complaint.service';
 import { DiscountService } from './services/discount.service';
 import { InvoiceService } from './services/invoice.service';
 import { TimingEventService } from './services/timing-event.service';
+import { AccessTokenService } from './services/access-token.service';
 import { ComplaintController } from './controllers/complaint.controller';
 import { DiscountController } from './controllers/discount.controller';
 import { InvoiceController } from './controllers/invoice.controller';
 import { AdminUsersController } from './controllers/admin-users.controller';
+import { AccessTokenController } from './controllers/access-token.controller';
 
 @Module({
   imports: [
@@ -36,8 +38,8 @@ import { AdminUsersController } from './controllers/admin-users.controller';
       TicketTimingEvent,
     ]),
   ],
-  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController],
-  providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService],
-  exports: [TypeOrmModule, TimingEventService],
+  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController],
+  providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService, AccessTokenService],
+  exports: [TypeOrmModule, TimingEventService, AccessTokenService],
 })
 export class OperacaoModule {}
