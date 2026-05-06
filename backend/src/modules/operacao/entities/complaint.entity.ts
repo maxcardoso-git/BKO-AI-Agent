@@ -374,6 +374,10 @@ export class Complaint {
   @Column({ type: 'text', nullable: true })
   enrichedText: string | null;
 
+  /** Responsável final: UUID do usuário que finalizou o tratamento desta reclamação */
+  @Column({ type: 'uuid', nullable: true })
+  responsavelFinal: string | null;
+
   @ManyToOne(() => Tipology, { nullable: true, eager: false })
   @JoinColumn({ name: 'tipologyId' })
   tipology: Tipology | null;
