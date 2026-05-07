@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-04-10)
 
 **Core value:** Cada reclamacao tratada com conformidade regulatoria, artefatos rastreaveis, HITL obrigatorio, sem perder prazo
-**Current focus:** Milestone v2 - Operator Workflow — Phase 9: Operator UI, Token Auth & RBAC
+**Current focus:** Milestone v2 - Operator Workflow — Phase 10: Validation UI, Training Memory & Audit Reports
 
 ## Current Position
 
-Phase: 9 — Operator UI, Token Auth & RBAC
-Plan: 1 of 4 (in progress)
-Status: In progress — 09-01 complete
-Last activity: 2026-05-06 — Completed 09-01 (backend token auth, lock, notes, RBAC)
+Phase: 10 — Validation UI, Training Memory & Audit Reports
+Plan: —
+Status: Phase 9 complete — ready to plan Phase 10
+Last activity: 2026-05-06 — Completed Phase 9 (Operator UI, Token Auth & RBAC — all 4 plans)
 
-Progress: v1 [██████████] 100% (23/23 plans) | v2 [████░░░░░░] 44% (4/9 plans)
+Progress: v1 [██████████] 100% (23/23 plans) | v2 [████████░░] 89% (8/9 plans)
 
 ## Performance Metrics
 
