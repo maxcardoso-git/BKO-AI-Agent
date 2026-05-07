@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, MoreThan, Repository } from 'typeorm';
 import { TicketLock } from '../entities/ticket-lock.entity';
 import { UserRole } from '../entities/user.entity';
 
@@ -72,6 +72,15 @@ export class TicketLockService {
     await this.lockRepo.update(lock.id, { expiresAt });
     lock.expiresAt = expiresAt;
     return lock;
+  }
+
+  /** List all active locks (admin view) with user and complaint relations. */
+  async findAll(): Promise<TicketLock[]> {
+    return this.lockRepo.find({
+      where: { expiresAt: MoreThan(new Date()) },
+      relations: ['user', 'complaint'],
+      order: { lockedAt: 'DESC' },
+    });
   }
 
   /** Force-release a lock (requires SUPERVISOR or ADMIN role). */

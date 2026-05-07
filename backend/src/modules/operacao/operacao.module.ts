@@ -25,6 +25,7 @@ import { AdminUsersController } from './controllers/admin-users.controller';
 import { AccessTokenController } from './controllers/access-token.controller';
 import { TicketLockController } from './controllers/ticket-lock.controller';
 import { ComplaintUserNoteController } from './controllers/complaint-user-note.controller';
+import { AdminLocksController } from './controllers/admin-locks.controller';
 
 @Module({
   imports: [
@@ -42,7 +43,7 @@ import { ComplaintUserNoteController } from './controllers/complaint-user-note.c
       TicketTimingEvent,
     ]),
   ],
-  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController, TicketLockController, ComplaintUserNoteController],
+  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController, TicketLockController, ComplaintUserNoteController, AdminLocksController],
   providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService, AccessTokenService, TicketLockService, ComplaintUserNoteService],
   exports: [TypeOrmModule, TimingEventService, AccessTokenService],
 })

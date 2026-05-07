@@ -17,10 +17,11 @@ export class AccessTokenService {
    * Generate a new opaque token for the given user.
    * Returns the created AccessToken entity (including the plain token value).
    */
-  async generateForUser(userId: string): Promise<AccessToken> {
+  async generateForUser(userId: string, ttlDaysOverride?: number): Promise<AccessToken> {
     const token = crypto.randomBytes(32).toString('hex');
+    const days = ttlDaysOverride ?? TOKEN_DEFAULT_TTL_DAYS;
     const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + TOKEN_DEFAULT_TTL_DAYS);
+    expiresAt.setDate(expiresAt.getDate() + days);
 
     const entity = this.accessTokenRepo.create({
       userId,
@@ -50,9 +51,9 @@ export class AccessTokenService {
     return entity;
   }
 
-  /** List all tokens (admin view). */
+  /** List all tokens (admin view) with user relation. */
   async findAll(): Promise<AccessToken[]> {
-    return this.accessTokenRepo.find({ order: { createdAt: 'DESC' } });
+    return this.accessTokenRepo.find({ relations: ['user'], order: { createdAt: 'DESC' } });
   }
 
   /** Revoke a token by id. */
