@@ -41,6 +41,7 @@ export class ComplaintParsingAgent {
     complaintText: string;
     tipologyKey?: string;
     protocolNumber?: string;
+    customSystemPrompt?: string;
   }): Promise<ComplaintParseResult & { usage: { inputTokens: number; outputTokens: number }; model: string; provider: string }> {
     // 1. Retrieve relevant KB context
     const kbChunks = await this.vectorSearch.search(
@@ -57,7 +58,7 @@ export class ComplaintParsingAgent {
       kbChunks,
     };
 
-    const { system, user } = this.promptBuilder.buildClassificationPrompt(ctx);
+    const { system, user } = this.promptBuilder.buildClassificationPrompt(ctx, input.customSystemPrompt);
 
     // 3. Call LLM with fallback
     const result = await this.modelSelector.callWithFallback(
@@ -104,7 +105,8 @@ export class ComplaintParsingAgent {
     const tipologyKey = input['tipologyKey'] as string | undefined;
     const protocolNumber = input['protocolNumber'] as string | undefined;
 
-    const result = await this.parse({ complaintText, tipologyKey, protocolNumber });
+    const customSystemPrompt = input['customSystemPrompt'] as string | undefined;
+    const result = await this.parse({ complaintText, tipologyKey, protocolNumber, customSystemPrompt });
 
     return {
       tipologyKey: result.tipologyKey,

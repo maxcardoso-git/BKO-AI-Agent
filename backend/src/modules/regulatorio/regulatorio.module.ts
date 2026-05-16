@@ -12,6 +12,7 @@ import { TipologyController } from './controllers/tipology.controller';
 import { AdminConfigController } from './controllers/admin-config.controller';
 import { AdminConfigService } from './services/admin-config.service';
 import { SkillDefinition } from '../orquestracao/entities/skill-definition.entity';
+import { Capability } from '../orquestracao/entities/capability.entity';
 import { CapabilityVersion } from '../orquestracao/entities/capability-version.entity';
 import { LlmModelConfig } from '../base-de-conhecimento/entities/llm-model-config.entity';
 import { ServiceType } from './entities/service-type.entity';
@@ -28,6 +29,7 @@ import { ServiceType } from './entities/service-type.entity';
       ResponseTemplate,
       MandatoryInfoRule,
       SkillDefinition,
+      Capability,
       CapabilityVersion,
       LlmModelConfig,
       ServiceType,

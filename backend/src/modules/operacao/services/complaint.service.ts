@@ -26,6 +26,8 @@ export class ComplaintService {
       riskLevel,
       isOverdue,
       search,
+      createdAfter,
+      createdBefore,
       page = 1,
       limit = 20,
       sortBy = 'createdAt',
@@ -69,6 +71,14 @@ export class ComplaintService {
         '(complaint.protocolNumber ILIKE :search OR complaint.rawText ILIKE :search)',
         { search: `%${search}%` },
       );
+    }
+
+    if (createdAfter) {
+      qb.andWhere('complaint.createdAt >= :createdAfter', { createdAfter });
+    }
+
+    if (createdBefore) {
+      qb.andWhere('complaint.createdAt < :createdBefore', { createdBefore });
     }
 
     const allowedSortFields = [

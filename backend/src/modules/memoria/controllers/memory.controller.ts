@@ -4,14 +4,13 @@ import {
   Patch,
   Param,
   Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Roles } from '../auth/decorators/roles.decorator';
-import { UserRole } from '../operacao/entities/user.entity';
-import { CaseMemory } from './entities/case-memory.entity';
-import { HumanFeedbackMemory } from './entities/human-feedback-memory.entity';
-import { StyleMemory } from './entities/style-memory.entity';
+import { CaseMemory } from '../entities/case-memory.entity';
+import { HumanFeedbackMemory } from '../entities/human-feedback-memory.entity';
+import { StyleMemory } from '../entities/style-memory.entity';
 
 @Controller('memory')
 export class MemoryController {
@@ -24,31 +23,31 @@ export class MemoryController {
     private readonly styleRepo: Repository<StyleMemory>,
   ) {}
 
-  // ─── Cases ────────────────────────────────────────────────────────────────
-
   @Get('cases')
-  @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
-  async listCases(
+  async getCases(
     @Query('page') page = '1',
     @Query('limit') limit = '20',
     @Query('includeInactive') includeInactive?: string,
   ) {
-    const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.min(100, parseInt(limit, 10) || 20);
-    const showAll = includeInactive === 'true';
-
+    const take = Math.min(parseInt(limit, 10) || 20, 100);
+    const skip = (Math.max(parseInt(page, 10) || 1, 1) - 1) * take;
+    const where = includeInactive === 'true' ? {} : { isActive: true };
     const items = await this.caseRepo.find({
-      where: showAll ? {} : { isActive: true },
-      relations: ['complaint'],
+      where,
+      relations: ['complaint', 'tipology'],
+      skip,
+      take,
       order: { createdAt: 'DESC' },
-      skip: (pageNum - 1) * limitNum,
-      take: limitNum,
     });
 
+    // Shape mapping kept in sync with frontend `CaseMemory` type in
+    // BKOConsole/src/types/memory.ts. Without this map the UI shows "—"
+    // because the raw entity uses different field names (summary vs summaryText).
     return items.map((c) => ({
       id: c.id,
       complaintId: c.complaintId,
       tipologiaId: c.tipologyId,
+      tipologiaName: c.tipology?.label ?? null,
       summaryText: c.summary,
       approvedResponseText: c.responseSnippet,
       outcome: c.outcome,
@@ -61,37 +60,30 @@ export class MemoryController {
   }
 
   @Patch('cases/:id/deactivate')
-  @Roles(UserRole.ADMIN)
-  async deactivateCase(@Param('id') id: string) {
-    await this.caseRepo.update(id, { isActive: false });
+  async deactivateCase(@Param('id', ParseUUIDPipe) id: string) {
+    await this.caseRepo.update(id, { isActive: false } as any);
     return { success: true };
   }
 
   @Patch('cases/:id/activate')
-  @Roles(UserRole.ADMIN)
-  async activateCase(@Param('id') id: string) {
-    await this.caseRepo.update(id, { isActive: true });
+  async activateCase(@Param('id', ParseUUIDPipe) id: string) {
+    await this.caseRepo.update(id, { isActive: true } as any);
     return { success: true };
   }
 
-  // ─── Feedback ─────────────────────────────────────────────────────────────
-
   @Get('feedback')
-  @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
-  async listFeedback(
+  async getFeedback(
     @Query('page') page = '1',
     @Query('limit') limit = '20',
   ) {
-    const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.min(100, parseInt(limit, 10) || 20);
-
+    const take = Math.min(parseInt(limit, 10) || 20, 100);
+    const skip = (Math.max(parseInt(page, 10) || 1, 1) - 1) * take;
     const items = await this.feedbackRepo.find({
       relations: ['complaint', 'tipology'],
+      skip,
+      take,
       order: { createdAt: 'DESC' },
-      skip: (pageNum - 1) * limitNum,
-      take: limitNum,
     });
-
     return items.map((f) => ({
       id: f.id,
       humanReviewId: f.complaintId,
@@ -107,22 +99,13 @@ export class MemoryController {
     }));
   }
 
-  // ─── Style ────────────────────────────────────────────────────────────────
-
   @Get('style')
-  @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
-  async listStyle(
-    @Query('tipologiaId') tipologiaId?: string,
-    @Query('limit') limit = '100',
-  ) {
-    const limitNum = Math.min(500, parseInt(limit, 10) || 100);
-
+  async getStyle(@Query('tipologiaId') tipologiaId?: string) {
+    const where = tipologiaId ? { tipologyId: tipologiaId } : {};
     const items = await this.styleRepo.find({
-      where: tipologiaId ? { tipologyId: tipologiaId } : {},
+      where,
       order: { createdAt: 'DESC' },
-      take: limitNum,
     });
-
     return items.map((s) => ({
       id: s.id,
       tipologiaId: s.tipologyId,

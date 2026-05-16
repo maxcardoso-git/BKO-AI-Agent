@@ -1,9 +1,14 @@
 import {
   Controller,
   Get,
+  Post,
   Put,
+  Patch,
+  Delete,
   Param,
   Body,
+  HttpCode,
+  HttpException,
 } from '@nestjs/common';
 import { IsString, IsNumber, IsOptional, IsArray, ValidateNested, IsObject } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -153,5 +158,56 @@ export class StepsDesignerController {
     @Body() body: UpdateVersionTransitionsDto,
   ) {
     return this.stepsDesignerService.updateVersionTransitions(verId, body.transitions);
+  }
+
+  /**
+   * PATCH /api/admin/capability-versions/:verId/activate
+   * Marks this version as the current (deployed) version for its capability.
+   */
+  @Patch('admin/capability-versions/:verId/activate')
+  activateVersion(@Param('verId') verId: string) {
+    return this.stepsDesignerService.activateVersion(verId);
+  }
+
+
+  /**
+   * GET /api/admin/steps/:stepKey/output-variables
+   * Returns available output variables from the most recent execution of a step.
+   */
+  @Get('admin/steps/:stepKey/output-variables')
+  getStepOutputVariables(@Param('stepKey') stepKey: string) {
+    return this.stepsDesignerService.getStepOutputVariables(stepKey);
+  }
+
+
+  /**
+   * PATCH /api/admin/capability-versions/:verId/toggle-active
+   * Toggles the isActive flag on a capability version.
+   */
+  @Patch('admin/capability-versions/:verId/toggle-active')
+  toggleVersionActive(
+    @Param('verId') verId: string,
+    @Body() body: { isActive: boolean },
+  ) {
+    return this.stepsDesignerService.toggleVersionActive(verId, body.isActive);
+  }
+
+  /**
+   * POST /api/admin/capability-versions/:verId/clone
+   * Clones a capability version with all its steps and transitions.
+   */
+  @Post('admin/capability-versions/:verId/clone')
+  cloneVersion(@Param('verId') verId: string) {
+    return this.stepsDesignerService.cloneVersion(verId);
+  }
+
+  /**
+   * DELETE /api/admin/capability-versions/:verId
+   * Deletes an inactive capability version. Blocked if isCurrent or isActive.
+   */
+  @Delete('admin/capability-versions/:verId')
+  @HttpCode(200)
+  async deleteVersion(@Param('verId') verId: string) {
+    return this.stepsDesignerService.deleteVersion(verId);
   }
 }

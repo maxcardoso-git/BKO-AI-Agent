@@ -89,7 +89,7 @@ export class TicketExecutionService {
     });
 
     if (existingExecution) {
-      throw new HttpException('An active execution already exists for this complaint', 409);
+      return existingExecution;
     }
 
     // 5. Select capability version
@@ -184,19 +184,17 @@ export class TicketExecutionService {
       const currentStep = steps.find((s) => s.key === execution.currentStepKey);
       if (!currentStep) break;
 
-      // Stop loop if this step requires human review
-      const requiresHuman = this.hitlPolicyService.shouldRequireHumanReview(
-        currentStep.isHumanRequired,
-        null,
-      );
-      if (requiresHuman) break;
-
-      // Advance the step
+      // Advance the step (advanceStep handles HITL pause internally:
+      // when isHumanRequired=true it generates the AI draft, sets status=PAUSED_HUMAN and returns)
       try {
         await this.advanceStep(executionId);
       } catch {
         break;
       }
+
+      // After advancing, re-read status; if paused or terminal, stop loop
+      const updated = await this.ticketExecutionRepo.findOne({ where: { id: executionId } });
+      if (!updated || updated.status !== TicketExecutionStatus.RUNNING) break;
     }
   }
 
@@ -310,8 +308,18 @@ export class TicketExecutionService {
           stepExec.output = output;
           await this.stepExecutionRepo.save(stepExec);
 
-          // Persist the AI draft as final_response artifact so the review page can load it
-          const aiDraft = (output['draftResponse'] as string) ?? (output['finalResponse'] as string) ?? '';
+          // Persist the AI draft as final_response artifact so the review page can load it.
+          // The compliance_check skill returns violations, not the draft text itself.
+          // Fall back to the most recent draft_response artifact for this complaint.
+          let aiDraft = (output['draftResponse'] as string) ?? (output['finalResponse'] as string) ?? '';
+          if (!aiDraft) {
+            const draftArtifact = await this.artifactRepo.findOne({
+              where: { complaintId: execution.complaintId, artifactType: 'draft_response' },
+              order: { createdAt: 'DESC' },
+            });
+            const draftContent = draftArtifact?.content as Record<string, unknown> | null;
+            aiDraft = (draftContent?.['draftResponse'] as string) ?? (draftContent?.['finalResponse'] as string) ?? '';
+          }
           await this.artifactRepo.save(
             this.artifactRepo.create({
               artifactType: 'final_response',

@@ -3,10 +3,17 @@
 // See: src/database/pgvector-bootstrap.service.ts
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // bodyParser:false disables the Nest-default body-parser so our custom
+  // limit-aware express middlewares below are the only ones registered.
+  const app = await NestFactory.create(AppModule, { bodyParser: false });
+  // Raise body size limit to support bulk imports (Turbina CSV batches).
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
+  app.enableCors({ origin: true, credentials: true });
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
     new ValidationPipe({

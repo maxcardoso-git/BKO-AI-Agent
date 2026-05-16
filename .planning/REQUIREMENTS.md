@@ -247,6 +247,32 @@
 - [ ] **RBAC-03**: Perfil OPERATOR tem `/processar` como rota inicial após login (em vez de `/tickets`)
 - [ ] **RBAC-04**: Tela técnica de execução (`/tickets/[id]/execution/[execId]`) retorna 403 para perfil OPERATOR
 
+### Token-Based Access
+
+- [ ] **AUTH-TOKEN-01**: Tabela `access_token` (id, userId, token VARCHAR(64) único, expiresAt, lastUsedAt nullable, isActive, createdAt) com FK para user
+- [ ] **AUTH-TOKEN-02**: Token gerado automaticamente ao criar usuário (UUID seguro, expiresAt = createdAt + TTL default)
+- [ ] **AUTH-TOKEN-03**: Admin pode gerar novo token e revogar tokens em `/admin/tokens` (lista, botão "Novo Token", botão "Revogar")
+- [ ] **AUTH-TOKEN-04**: Rota `/processar?token=XXX` valida token (existe, ativo, não expirado), cria sessão temporária, redireciona para `/processar` removendo token da URL
+- [ ] **AUTH-TOKEN-05**: Token inválido/expirado retorna tela de erro com mensagem "Token expirado, contate o administrador"
+- [ ] **AUTH-TOKEN-06**: `lastUsedAt` atualiza a cada acesso (telemetria de uso)
+- [ ] **AUTH-TOKEN-07**: TTL default configurável (variável de ambiente `TOKEN_DEFAULT_TTL_DAYS`, default 30 dias) com override por token na criação
+
+### Audit & Timing
+
+- [ ] **AUDIT-TIMING-01**: Tabela `ticket_timing_event` (id, complaintId, executionId nullable, milestone VARCHAR, occurredAt, userId nullable) registrando eventos: `ticket_created`, `note_saved`, `execution_started`, `paused_human`, `decision_made`, `approved`, `completed`
+- [ ] **AUDIT-TIMING-02**: Endpoint `GET /api/complaints/:id/timing` retorna métricas calculadas: tempo_total, tempo_sla, tempo_revisao_humana, tempo_nota_a_processamento, tempo_aprovacao_a_conclusao
+- [ ] **AUDIT-TIMING-03**: Página `/admin/audit/timings` com tabela de tickets + tempos (filtros: tipologia, período, perfil de usuário)
+- [ ] **AUDIT-TIMING-04**: Painel de observabilidade ganha métrica `human_review_avg_time` (tempo médio entre `paused_human` e `decision_made`)
+- [ ] **AUDIT-TIMING-05**: Cada `ticket_timing_event` registra `userId` quando ação é humana (note_saved, decision_made, approved, completed); `userId` é null para eventos automáticos (execution_started, paused_human)
+
+### Ticket Locking
+
+- [ ] **LOCK-01**: Tabela `ticket_lock` (id, complaintId UNIQUE, userId, lockedAt, expiresAt) — constraint UNIQUE em complaintId garante 1 lock por ticket
+- [ ] **LOCK-02**: Ao buscar ticket em `/processar`, sistema cria lock (TTL configurável, default 30min) se inexistente ou expirado; renova `expiresAt` em cada ação do mesmo usuário
+- [ ] **LOCK-03**: Outro usuário tentando acessar ticket bloqueado vê mensagem "Ticket sendo tratado por {nome_usuario} desde {hora_relativa}" + botão para forçar (apenas SUPERVISOR/ADMIN)
+- [ ] **LOCK-04**: Lock é liberado quando: (a) decisão final do operador (aprovar/corrigir/reprovar), (b) admin força liberação, (c) `expiresAt` ultrapassa `now()` sem renovação
+- [ ] **LOCK-05**: Audit registra `responsavelFinal` no ticket = último userId que tomou ação (decisão final ou edição da nota)
+
 ## Future Requirements (v3+)
 
 ### Sandbox de Avaliacao

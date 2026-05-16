@@ -4,6 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Persona } from '../entities/persona.entity';
 import { ResponseTemplate } from '../entities/response-template.entity';
 import { SkillDefinition } from '../../orquestracao/entities/skill-definition.entity';
+import { Capability } from '../../orquestracao/entities/capability.entity';
 import { CapabilityVersion } from '../../orquestracao/entities/capability-version.entity';
 import { LlmModelConfig } from '../../base-de-conhecimento/entities/llm-model-config.entity';
 import { Tipology } from '../entities/tipology.entity';
@@ -19,6 +20,8 @@ export class AdminConfigService {
     private readonly templateRepo: Repository<ResponseTemplate>,
     @InjectRepository(SkillDefinition)
     private readonly skillRepo: Repository<SkillDefinition>,
+    @InjectRepository(Capability)
+    private readonly capabilityParentRepo: Repository<Capability>,
     @InjectRepository(CapabilityVersion)
     private readonly capabilityRepo: Repository<CapabilityVersion>,
     @InjectRepository(LlmModelConfig)
@@ -86,6 +89,10 @@ export class AdminConfigService {
     return this.skillRepo.find({ order: { key: 'ASC' } });
   }
 
+  async createSkill(dto: Partial<SkillDefinition>): Promise<SkillDefinition> {
+    return this.skillRepo.save(this.skillRepo.create(dto));
+  }
+
   async updateSkill(id: string, dto: Partial<SkillDefinition>): Promise<SkillDefinition> {
     const existing = await this.skillRepo.findOneOrFail({ where: { id } });
     return this.skillRepo.save({ ...existing, ...dto });
@@ -93,16 +100,35 @@ export class AdminConfigService {
 
   // ─── Capabilities ─────────────────────────────────────────────────────────
 
-  async listCapabilities(): Promise<(CapabilityVersion & { capabilityKey: string; capabilityName: string })[]> {
+  async listCapabilities(): Promise<(CapabilityVersion & { capabilityKey: string; capabilityName: string; stepCount: number })[]> {
     const versions = await this.capabilityRepo.find({
-      relations: ['capability'],
+      relations: ['capability', 'steps'],
       order: { createdAt: 'DESC' },
     });
     return versions.map((v) => ({
       ...v,
       capabilityKey: v.capability?.key ?? '',
       capabilityName: v.capability?.name ?? '',
+      stepCount: v.steps?.length ?? 0,
     }));
+  }
+
+  async createCapability(dto: { capabilityKey: string; version: number; description?: string }): Promise<CapabilityVersion> {
+    // Find or create the parent Capability
+    let parent = await this.capabilityParentRepo.findOne({ where: { key: dto.capabilityKey } });
+    if (!parent) {
+      parent = await this.capabilityParentRepo.save(
+        this.capabilityParentRepo.create({ key: dto.capabilityKey, name: dto.capabilityKey }),
+      );
+    }
+    const cv = this.capabilityRepo.create({
+      capabilityId: parent.id,
+      version: dto.version,
+      description: dto.description ?? null,
+      isActive: true,
+      isCurrent: true,
+    });
+    return this.capabilityRepo.save(cv);
   }
 
   async updateCapability(id: string, dto: Partial<CapabilityVersion>): Promise<CapabilityVersion> {

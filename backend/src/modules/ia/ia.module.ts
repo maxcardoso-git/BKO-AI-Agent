@@ -11,13 +11,19 @@ import { DraftGeneratorAgent } from './services/draft-generator.agent';
 import { ComplianceEvaluatorAgent } from './services/compliance-evaluator.agent';
 import { FinalResponseComposerAgent } from './services/final-response-composer.agent';
 import { TokenUsageTrackerService } from './services/token-usage-tracker.service';
+import { SmartNoteService } from './services/smart-note.service';
+import { SmartNoteController } from './controllers/smart-note.controller';
+import { Complaint } from '../operacao/entities/complaint.entity';
+import { ResponseTemplate } from '../regulatorio/entities/response-template.entity';
+import { TemplateFieldsExtractorService } from './services/template-fields-extractor.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([LlmCall, TokenUsage]), // direct import avoids circular dep with ExecucaoModule
+    TypeOrmModule.forFeature([LlmCall, TokenUsage, Complaint, ResponseTemplate]),
     forwardRef(() => BaseDeConhecimentoModule), // forwardRef: IaModule -> BDCM -> MemoriaModule -> forwardRef(IaModule)
     RegulatorioModule,        // provides Persona repo (for future persona-based prompt building)
   ],
+  controllers: [SmartNoteController],
   providers: [
     ModelSelectorService,
     PromptBuilderService,
@@ -26,6 +32,8 @@ import { TokenUsageTrackerService } from './services/token-usage-tracker.service
     ComplianceEvaluatorAgent,
     FinalResponseComposerAgent,
     TokenUsageTrackerService,
+    SmartNoteService,
+    TemplateFieldsExtractorService,
   ],
   exports: [
     ModelSelectorService,
@@ -35,6 +43,8 @@ import { TokenUsageTrackerService } from './services/token-usage-tracker.service
     ComplianceEvaluatorAgent,
     FinalResponseComposerAgent,
     TokenUsageTrackerService,
+    SmartNoteService,
+    TemplateFieldsExtractorService,
   ],
 })
 export class IaModule {}

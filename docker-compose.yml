@@ -1,45 +1,64 @@
 services:
   postgres:
     image: pgvector/pgvector:pg17
+    container_name: bkoagent-postgres-1
     environment:
       POSTGRES_USER: bko
       POSTGRES_PASSWORD: bko_secret
       POSTGRES_DB: bkoagent
+    volumes:
+      - bkoagent_pgdata:/var/lib/postgresql/data
     ports:
       - "5433:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-      - ./backend/src/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U bko -d bkoagent"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    networks:
+      - bkoagent_default
+    restart: unless-stopped
 
   backend:
-    build: ./backend
-    depends_on:
-      postgres:
-        condition: service_healthy
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bkoagent-backend
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_USER: bko
       DB_PASS: bko_secret
       DB_NAME: bkoagent
-      NODE_ENV: development
+      EMBEDDING_DIMENSIONS: 1536
+      NODE_ENV: production
+      JWT_SECRET: bko-dev-secret-change-in-production
+      JWT_EXPIRES_IN: 8h
+      PORT: 3111
     ports:
-      - "3001:3001"
+      - "3111:3111"
+    depends_on:
+      - postgres
+    networks:
+      - bkoagent_default
+    restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bkoagent-frontend
+    environment:
+      BACKEND_URL: http://backend:3111
+      SESSION_SECRET: bko-agent-session-secret-dev-32-chars-ok
+      PORT: 3210
     ports:
-      - "3000:3000"
+      - "3210:3210"
+    depends_on:
+      - backend
+    networks:
+      - bkoagent_default
+    restart: unless-stopped
 
 volumes:
-  pgdata:
+  bkoagent_pgdata:
+    external: true
+
+networks:
+  bkoagent_default:
+    external: true

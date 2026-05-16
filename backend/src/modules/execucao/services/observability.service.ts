@@ -189,6 +189,186 @@ export class ObservabilityService {
     );
   }
 
+  // ─── TMT — Tempo Médio de Tratamento ──────────────────────────────────────
+  // Start: ticket_timing_event milestone='execution_started' (when operator clicks "Iniciar Processamento")
+  // End:   ticket_timing_event milestone='approved' OR human_review.reviewedAt with status='approved'
+  //        (fallback covers historical executions before milestone 'approved' was emitted)
+
+  private buildTmtCte(from: Date, to: Date): { sql: string; params: unknown[] } {
+    // CTE that resolves start/end per execution and joins complaint metadata + operator
+    const sql = `
+      WITH tmt_base AS (
+        SELECT
+          te.id AS execution_id,
+          te."complaintId" AS complaint_id,
+          c."tipologyId" AS tipology_id,
+          c."riskLevel" AS risk_level,
+          (
+            SELECT MIN(tte."occurredAt") FROM ticket_timing_event tte
+            WHERE tte."executionId" = te.id AND tte.milestone = 'execution_started'
+          ) AS started_at,
+          COALESCE(
+            (SELECT MAX(tte2."occurredAt") FROM ticket_timing_event tte2
+              WHERE tte2."executionId" = te.id AND tte2.milestone = 'approved'),
+            (SELECT MAX(hr."reviewedAt") FROM human_review hr
+              INNER JOIN step_execution se ON se.id = hr."stepExecutionId"
+              WHERE se."ticketExecutionId" = te.id AND hr.status = 'approved')
+          ) AS approved_at,
+          COALESCE(
+            (SELECT tte3."userId"::text FROM ticket_timing_event tte3
+              WHERE tte3."executionId" = te.id AND tte3.milestone = 'approved'
+              ORDER BY tte3."occurredAt" DESC LIMIT 1),
+            (SELECT hr2."reviewerUserId" FROM human_review hr2
+              INNER JOIN step_execution se2 ON se2.id = hr2."stepExecutionId"
+              WHERE se2."ticketExecutionId" = te.id AND hr2.status = 'approved'
+              ORDER BY hr2."reviewedAt" DESC LIMIT 1)
+          ) AS operator_user_id
+        FROM ticket_execution te
+        INNER JOIN complaint c ON c.id = te."complaintId"
+      ),
+      tmt AS (
+        SELECT
+          execution_id,
+          complaint_id,
+          tipology_id,
+          risk_level,
+          operator_user_id,
+          started_at,
+          approved_at,
+          EXTRACT(EPOCH FROM (approved_at - started_at)) * 1000 AS tmt_ms
+        FROM tmt_base
+        WHERE started_at IS NOT NULL
+          AND approved_at IS NOT NULL
+          AND approved_at >= started_at
+          AND started_at >= $1
+          AND started_at < $2
+      )
+    `;
+    return { sql, params: [from, to] };
+  }
+
+  async getTmt(fromISO?: string, toISO?: string): Promise<{
+    range: { from: string; to: string };
+    summary: {
+      count: number;
+      avgMs: number;
+      medianMs: number;
+      p95Ms: number;
+      minMs: number;
+      maxMs: number;
+    };
+    byTipology: Array<{ tipologyKey: string | null; tipologyLabel: string | null; avgMs: number; count: number }>;
+    byOperator: Array<{ userId: string | null; name: string | null; email: string | null; avgMs: number; count: number }>;
+    byRisk: Array<{ risk: string | null; avgMs: number; count: number }>;
+    series: Array<{ date: string; avgMs: number; count: number }>;
+  }> {
+    const to = toISO ? new Date(toISO) : new Date();
+    const from = fromISO ? new Date(fromISO) : new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const { sql: cte, params } = this.buildTmtCte(from, to);
+
+    const [summaryRows, byTipologyRows, byOperatorRows, byRiskRows, seriesRows] = await Promise.all([
+      this.dataSource.query(
+        `${cte}
+         SELECT
+           COUNT(*)::int AS count,
+           COALESCE(AVG(tmt_ms), 0)::float AS avg_ms,
+           COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY tmt_ms), 0)::float AS median_ms,
+           COALESCE(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY tmt_ms), 0)::float AS p95_ms,
+           COALESCE(MIN(tmt_ms), 0)::float AS min_ms,
+           COALESCE(MAX(tmt_ms), 0)::float AS max_ms
+         FROM tmt`,
+        params,
+      ),
+      this.dataSource.query(
+        `${cte}
+         SELECT
+           t.key AS tipology_key,
+           t.label AS tipology_label,
+           COALESCE(AVG(tmt.tmt_ms), 0)::float AS avg_ms,
+           COUNT(*)::int AS count
+         FROM tmt
+         LEFT JOIN tipology t ON t.id = tmt.tipology_id
+         GROUP BY t.key, t.label
+         ORDER BY avg_ms DESC`,
+        params,
+      ),
+      this.dataSource.query(
+        `${cte}
+         SELECT
+           tmt.operator_user_id AS user_id,
+           u.name AS name,
+           u.email AS email,
+           COALESCE(AVG(tmt.tmt_ms), 0)::float AS avg_ms,
+           COUNT(*)::int AS count
+         FROM tmt
+         LEFT JOIN "user" u ON u.id::text = tmt.operator_user_id
+         GROUP BY tmt.operator_user_id, u.name, u.email
+         ORDER BY avg_ms DESC`,
+        params,
+      ),
+      this.dataSource.query(
+        `${cte}
+         SELECT
+           tmt.risk_level AS risk,
+           COALESCE(AVG(tmt.tmt_ms), 0)::float AS avg_ms,
+           COUNT(*)::int AS count
+         FROM tmt
+         GROUP BY tmt.risk_level
+         ORDER BY avg_ms DESC`,
+        params,
+      ),
+      this.dataSource.query(
+        `${cte}
+         SELECT
+           to_char(date_trunc('day', tmt.started_at), 'YYYY-MM-DD') AS date,
+           COALESCE(AVG(tmt.tmt_ms), 0)::float AS avg_ms,
+           COUNT(*)::int AS count
+         FROM tmt
+         GROUP BY date_trunc('day', tmt.started_at)
+         ORDER BY date_trunc('day', tmt.started_at) ASC`,
+        params,
+      ),
+    ]);
+
+    const summary = summaryRows[0] ?? { count: 0, avg_ms: 0, median_ms: 0, p95_ms: 0, min_ms: 0, max_ms: 0 };
+
+    return {
+      range: { from: from.toISOString(), to: to.toISOString() },
+      summary: {
+        count: Number(summary.count) || 0,
+        avgMs: Number(summary.avg_ms) || 0,
+        medianMs: Number(summary.median_ms) || 0,
+        p95Ms: Number(summary.p95_ms) || 0,
+        minMs: Number(summary.min_ms) || 0,
+        maxMs: Number(summary.max_ms) || 0,
+      },
+      byTipology: byTipologyRows.map((r: { tipology_key: string | null; tipology_label: string | null; avg_ms: number; count: number }) => ({
+        tipologyKey: r.tipology_key,
+        tipologyLabel: r.tipology_label,
+        avgMs: Number(r.avg_ms) || 0,
+        count: Number(r.count) || 0,
+      })),
+      byOperator: byOperatorRows.map((r: { user_id: string | null; name: string | null; email: string | null; avg_ms: number; count: number }) => ({
+        userId: r.user_id,
+        name: r.name,
+        email: r.email,
+        avgMs: Number(r.avg_ms) || 0,
+        count: Number(r.count) || 0,
+      })),
+      byRisk: byRiskRows.map((r: { risk: string | null; avg_ms: number; count: number }) => ({
+        risk: r.risk,
+        avgMs: Number(r.avg_ms) || 0,
+        count: Number(r.count) || 0,
+      })),
+      series: seriesRows.map((r: { date: string; avg_ms: number; count: number }) => ({
+        date: r.date,
+        avgMs: Number(r.avg_ms) || 0,
+        count: Number(r.count) || 0,
+      })),
+    };
+  }
+
   async getTicketLogs(complaintId: string): Promise<
     Array<{
       id: string;

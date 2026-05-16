@@ -9,7 +9,7 @@ import { StyleMemory } from './entities/style-memory.entity';
 import { IaModule } from '../ia/ia.module';
 import { MemoryRetrievalService } from './services/memory-retrieval.service';
 import { MemoryFeedbackService } from './services/memory-feedback.service';
-import { MemoryController } from './memory.controller';
+import { MemoryController } from './controllers/memory.controller';
 
 @Module({
   imports: [

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, HttpException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -8,9 +8,8 @@ import { z } from 'zod';
 import { Artifact } from '../entities/artifact.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { Complaint } from '../../operacao/entities/complaint.entity';
-import { ComplaintUserNote } from '../../operacao/entities/complaint-user-note.entity';
-import { TicketTimingEvent } from '../../operacao/entities/ticket-timing-event.entity';
 import { Persona } from '../../regulatorio/entities/persona.entity';
+import { Tipology } from '../../regulatorio/entities/tipology.entity';
 import { CaseMemory } from '../../memoria/entities/case-memory.entity';
 import { HumanFeedbackMemory } from '../../memoria/entities/human-feedback-memory.entity';
 import { ComplaintParsingAgent } from '../../ia/services/complaint-parsing.agent';
@@ -63,6 +62,9 @@ export class SkillRegistryService {
     @InjectRepository(Persona)
     private readonly personaRepo: Repository<Persona>,
 
+    @InjectRepository(Tipology)
+    private readonly tipologyRepo: Repository<Tipology>,
+
     @InjectRepository(CaseMemory)
     private readonly caseMemoryRepo: Repository<CaseMemory>,
 
@@ -90,12 +92,6 @@ export class SkillRegistryService {
 
     // Memory retrieval (MEM-01..MEM-06)
     private readonly memoryRetrieval: MemoryRetrievalService,
-
-    @InjectRepository(ComplaintUserNote)
-    private readonly complaintUserNoteRepo: Repository<ComplaintUserNote>,
-
-    @InjectRepository(TicketTimingEvent)
-    private readonly ticketTimingEventRepo: Repository<TicketTimingEvent>,
   ) {}
 
   /**
@@ -416,39 +412,6 @@ export class SkillRegistryService {
     });
     if (!complaint) return { error: 'Complaint not found', complaintId };
 
-    // PIPE-02: Load latest active operator note (most recent version)
-    const latestNote = await this.complaintUserNoteRepo.findOne({
-      where: { complaintId: complaint.id, isActive: true },
-      order: { version: 'DESC' },
-    });
-
-    // PIPE-02: Compose enrichedText: rawText alone when no note; rawText + delimiter + note when present
-    const enrichedText = latestNote
-      ? `${complaint.rawText}\n\n[NOTA OPERADOR]:\n${latestNote.content}`
-      : complaint.rawText;
-
-    // Persist enrichedText back onto complaint so other consumers can read it without re-running the skill
-    if (complaint.enrichedText !== enrichedText) {
-      complaint.enrichedText = enrichedText;
-      await this.complaintRepo.save(complaint);
-    }
-
-    // AUDIT-TIMING-05: Emit ticket_created on first LoadComplaint run for this complaint (idempotent)
-    const existingEvent = await this.ticketTimingEventRepo.findOne({
-      where: { complaintId: complaint.id, milestone: 'ticket_created' },
-    });
-    if (!existingEvent) {
-      await this.ticketTimingEventRepo.save(
-        this.ticketTimingEventRepo.create({
-          complaintId: complaint.id,
-          milestone: 'ticket_created',
-          occurredAt: complaint.createdAt ?? new Date(),
-          userId: null,
-          executionId: null,
-        }),
-      );
-    }
-
     const artifact = await this.artifactRepo.save(
       this.artifactRepo.create({
         artifactType: 'parsed_complaint',
@@ -456,8 +419,6 @@ export class SkillRegistryService {
           id: complaint.id,
           protocolNumber: complaint.protocolNumber,
           rawText: complaint.rawText,
-          enrichedText,                       // PIPE-02
-          operatorNote: latestNote?.content ?? null,
           tipologyKey: complaint.tipology?.key ?? null,
           situationKey: complaint.situation?.key ?? null,
           source: complaint.source,
@@ -481,10 +442,6 @@ export class SkillRegistryService {
       situationId: complaint.situationId,
       tipologyKey: complaint.tipology?.key ?? null,
       rawText: complaint.rawText,
-      enrichedText,                  // PIPE-02
-      operatorNote: latestNote?.content ?? null,    // PIPE-02 — surface raw note for DraftFinalResponse
-      operatorNoteParameters: latestNote?.parameters ?? null,
-      operatorNoteVersion: latestNote?.version ?? null,
       artifactId: artifact.id,
     };
   }
@@ -781,13 +738,7 @@ Situacao atual: ${situationKey ?? 'nao informada'}`;
     };
   }
 
-  /**
-   * SKLL-11: BuildMandatoryChecklist — mandatory info resolver, persist ART-06 mandatory_checklist
-   *
-   * PIPE-05: This skill operates strictly off tipologyId + situationId via mandatoryInfoResolver.
-   * It does NOT read invoice or discount data, so it remains tolerant of the v2 simplified pipeline
-   * (retrieve_discounts/retrieve_invoices steps deactivated) without any further changes.
-   */
+  /** SKLL-11: BuildMandatoryChecklist — mandatory info resolver, persist ART-06 mandatory_checklist */
   private async buildMandatoryChecklist(
     input: Record<string, unknown>,
     stepExecutionId: string,
@@ -1285,5 +1236,161 @@ A recomendacao deve ser pratica e curta (1-2 frases).`;
       provider: result.provider,
       usage: result.usage,
     };
+  }
+
+  // -----------------------------------------------------------------------
+  // Public preview API (called from /api/complaints/:id/sentiment-preview)
+  // -----------------------------------------------------------------------
+
+  /**
+   * Runs analyzeCustomerSentiment + typology classification + IQI template lookup for a complaint
+   * without a pipeline execution. Returns { sentiment, typology, iqi }. Uses artifacts as cache.
+   */
+  async previewCustomerSentiment(complaintId: string): Promise<{
+    sentiment: Record<string, unknown>;
+    typology: Record<string, unknown> | null;
+    iqi: Record<string, unknown> | null;
+  }> {
+    const complaint = await this.complaintRepo.findOne({ where: { id: complaintId } });
+    if (!complaint) throw new HttpException('Complaint not found', 404);
+
+    const [sentiment, typology] = await Promise.all([
+      this.getOrCreateSentiment(complaintId, complaint.rawText ?? ''),
+      this.getOrCreateTypology(complaintId, complaint.rawText ?? ''),
+    ]);
+
+    const iqi = await this.getOrCreateIqi(complaintId, typology);
+
+    return { sentiment, typology, iqi };
+  }
+
+  private async getOrCreateSentiment(complaintId: string, rawText: string): Promise<Record<string, unknown>> {
+    const existing = await this.artifactRepo.findOne({
+      where: { complaintId, artifactType: 'customer_sentiment' },
+      order: { createdAt: 'DESC' },
+    });
+    if (existing) return existing.content as Record<string, unknown>;
+
+    const sentimentCustomPrompt = await this.getCustomSystemPrompt('AnalyzeCustomerSentiment');
+    const defaultSentimentPrompt = `Voce e um analista de sentimentos especializado em reclamacoes de telecomunicacoes.
+Analise o texto da reclamacao e avalie a propensao do cliente a fazer uma nova reclamacao.
+
+Criterios para o propensityScore (0-100):
+- 0-30: Baixo risco. Cliente calmo, primeira reclamacao, sem ameacas
+- 31-50: Medio. Alguma frustacao, pode ter historico
+- 51-70: Alto. Frustrado, menciona tentativas anteriores sem sucesso
+- 71-85: Muito alto. Irritado, ameacas de acao legal ou midia social
+- 86-100: Critico. Furioso, multiplas reclamacoes anteriores, ameacas concretas
+
+A recomendacao deve ser pratica e curta (1-2 frases).`;
+    const systemPrompt = sentimentCustomPrompt ?? defaultSentimentPrompt;
+
+    const result = await this.modelSelector.callWithFallback(
+      'classificacao',
+      async ({ model, config }) => {
+        const { object } = await generateObject({
+          model,
+          schema: CustomerSentimentSchema,
+          system: systemPrompt,
+          prompt: `Reclamacao:\n${rawText}`,
+          temperature: config.temperature,
+          maxOutputTokens: config.maxOutputTokens ?? 1024,
+        });
+        return object;
+      },
+    );
+
+    const content = {
+      propensityScore: result.propensityScore,
+      emotionalTone: result.emotionalTone,
+      emotionalIntensity: result.emotionalIntensity,
+      hasPriorComplaints: result.hasPriorComplaints,
+      priorComplaintCount: result.priorComplaintCount,
+      hasLegalThreat: result.hasLegalThreat,
+      hasSocialMediaThreat: result.hasSocialMediaThreat,
+      urgencyLevel: result.urgencyLevel,
+      complexityLevel: result.complexityLevel,
+      keyPhrases: result.keyPhrases,
+      recommendation: result.recommendation,
+      riskFactors: result.riskFactors,
+    };
+
+    await this.artifactRepo.save(
+      this.artifactRepo.create({
+        artifactType: 'customer_sentiment',
+        content,
+        version: 1,
+        complaintId,
+      }),
+    );
+
+    return content;
+  }
+
+  private async getOrCreateTypology(complaintId: string, rawText: string): Promise<Record<string, unknown> | null> {
+    const existing = await this.artifactRepo.findOne({
+      where: { complaintId, artifactType: 'typology_classification' },
+      order: { createdAt: 'DESC' },
+    });
+    if (existing) return existing.content as Record<string, unknown>;
+
+    if (!rawText.trim()) return null;
+
+    const customPrompt = await this.getCustomSystemPrompt('ClassifyTypology');
+    const classified = await this.complaintParser.classify({
+      complaintText: rawText,
+      customSystemPrompt: customPrompt ?? undefined,
+    });
+
+    const tipologyKey = classified.tipologyKey as string | undefined;
+    let tipologyLabel: string | null = null;
+    let tipologyId: string | null = null;
+    if (tipologyKey) {
+      const tip = await this.tipologyRepo.findOne({ where: { key: tipologyKey } });
+      tipologyId = tip?.id ?? null;
+      tipologyLabel = tip?.label ?? null;
+    }
+
+    const content = { ...classified, tipologyId, tipologyLabel };
+    await this.artifactRepo.save(
+      this.artifactRepo.create({
+        artifactType: 'typology_classification',
+        content,
+        version: 1,
+        complaintId,
+      }),
+    );
+    return content;
+  }
+
+  private async getOrCreateIqi(
+    complaintId: string,
+    typology: Record<string, unknown> | null,
+  ): Promise<Record<string, unknown> | null> {
+    const tipologyId = typology?.tipologyId as string | null | undefined;
+    if (!tipologyId) return null;
+
+    const existing = await this.artifactRepo.findOne({
+      where: { complaintId, artifactType: 'iqi_template' },
+      order: { createdAt: 'DESC' },
+    });
+    if (existing) return existing.content as Record<string, unknown>;
+
+    const template = await this.templateResolver.resolve(tipologyId, null);
+    const content = {
+      templateId: template?.id ?? null,
+      templateName: template?.name ?? null,
+      templateContent: template?.templateContent ?? null,
+      matchType: template?.matchType ?? null,
+    };
+    await this.artifactRepo.save(
+      this.artifactRepo.create({
+        artifactType: 'iqi_template',
+        content,
+        version: 1,
+        complaintId,
+      }),
+    );
+    return content;
   }
 }

@@ -464,4 +464,14 @@ export class StepsDesignerService {
       return { id: newVer.id, version: newVersionNumber };
     });
   }
+
+  async deleteVersion(verId: string): Promise<{ success: boolean }> {
+    const ver = await this.capVersionRepo.findOne({ where: { id: verId } });
+    if (!ver) throw new HttpException('Capability version not found', 404);
+    if (ver.isActive) {
+      throw new HttpException('Cannot delete an active pipeline version. Deactivate it first.', 422);
+    }
+    await this.capVersionRepo.delete({ id: verId });
+    return { success: true };
+  }
 }

@@ -25,12 +25,13 @@ export class Artifact {
 
   @ManyToOne(() => StepExecution, (se) => se.artifacts, {
     onDelete: 'CASCADE',
+    nullable: true,
   })
   @JoinColumn({ name: 'stepExecutionId' })
-  stepExecution: StepExecution;
+  stepExecution: StepExecution | null;
 
-  @Column({ type: 'uuid' })
-  stepExecutionId: string;
+  @Column({ type: 'uuid', nullable: true })
+  stepExecutionId: string | null;
 
   @ManyToOne(() => Complaint, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'complaintId' })

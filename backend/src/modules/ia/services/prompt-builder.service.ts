@@ -14,6 +14,17 @@ export interface PromptContext {
   protocoloPrestadora?: string | null;
   consumerName?: string;
   consumerCpf?: string | null;
+  /** Contact + cliente fields imported from Turbina that the IQI template may
+   *  reference via placeholders. Always optional — the LLM uses whichever the
+   *  resolved template needs and ignores the rest. */
+  telefoneContatoFixo?: string | null;
+  telefoneReclamado?: string | null;
+  telefoneWhatsapp?: string | null;
+  cpfCnpjAssinante?: string | null;
+  justificativa?: string | null;
+  clienteEmail?: string | null;
+  clienteCep?: string | null;
+  avaliacao?: string | null;
   analysisDate?: string;
   kbChunks?: VectorSearchResult[];
   template?: ResolvedTemplate | null;
@@ -240,6 +251,19 @@ export class PromptBuilderService {
       for (const field of ctx.mandatoryFields) {
         system.push(`- ${field.fieldLabel} (${field.isRequired ? 'OBRIGATORIO' : 'OPCIONAL'})`);
       }
+      system.push(
+        '',
+        '## Como avaliar mandatoryFieldsStatus (REGRA ESTRITA):',
+        '- isPresent = TRUE se a informacao aparece em QUALQUER lugar da resposta, em QUALQUER formato (linha separada, dentro de paragrafo, abreviada, com label diferente, etc).',
+        '- Datas em qualquer formato (DD/MM/AAAA, DD/MM, "27/11", "13/05/2026") contam como presentes para campos de data.',
+        '- Prazos como "5 a 10 dias uteis", "ate 7 dias", "imediatamente" contam como presentes para campos de prazo.',
+        '- Numeros de protocolo (sequencias de 14+ digitos) contam como presentes para campo de protocolo.',
+        '- CPF/CNPJ (com ou sem mascara) contam como presentes para campo de documento.',
+        '- Nomes proprios contam como presentes para campo de nome do reclamante.',
+        '- Em "excerpt", copie o trecho LITERAL da resposta onde o item foi encontrado.',
+        '- Marque isPresent = FALSE APENAS se nao encontrar absolutamente nenhuma mencao ao conceito na resposta.',
+        '- Nao gere violations para campos que voce marcou como isPresent = true. Violations sao apenas para campos REALMENTE ausentes ou com problema grave.',
+      );
     }
 
     if (ctx.kbChunks && ctx.kbChunks.length > 0) {

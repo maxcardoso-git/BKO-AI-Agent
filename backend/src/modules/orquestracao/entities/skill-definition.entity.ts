@@ -32,6 +32,18 @@ export class SkillDefinition {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
+  @Column({ type: 'text', nullable: true })
+  systemPrompt: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  userPromptTemplate: string | null;
+
+  @Column({ type: 'jsonb', nullable: true, default: '[]' })
+  promptVariables: string[];
+
+  @Column({ type: 'varchar', default: 'code' })
+  skillType: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

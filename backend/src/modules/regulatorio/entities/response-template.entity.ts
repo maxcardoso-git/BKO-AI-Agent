@@ -44,6 +44,13 @@ export class ResponseTemplate {
   @Column({ type: 'uuid', nullable: true })
   situationId: string | null;
 
+  /** Cache of LLM-extracted required input fields parsed from the
+   *  "INFORMAÇÕES OBRIGATÓRIAS:" section of templateContent. Lazy-populated
+   *  on the first /template-fields call so the operator UI does not pay the
+   *  LLM round-trip on every pull. */
+  @Column({ type: 'jsonb', nullable: true })
+  requiredFieldsCache: { fields: Array<{ key: string; label: string; type: 'date' | 'number' | 'text' }> } | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -10,7 +10,8 @@ export type TimingMilestone =
   | 'paused_human'
   | 'decision_made'
   | 'approved'
-  | 'completed';
+  | 'completed'
+  | 'ticket_discarded';
 
 @Injectable()
 export class TimingEventService {

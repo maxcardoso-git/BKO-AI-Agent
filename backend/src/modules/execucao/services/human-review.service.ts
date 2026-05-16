@@ -10,6 +10,8 @@ import { Artifact } from '../entities/artifact.entity';
 import { diffWords } from 'diff';
 import { SubmitReviewDto } from '../dto/submit-review.dto';
 import { MemoryFeedbackService } from '../../memoria/services/memory-feedback.service';
+import { TicketExecutionService } from './ticket-execution.service';
+import { TimingEventService } from '../../operacao/services/timing-event.service';
 
 // ---------------------------------------------------------------------------
 // HitlPolicyService — risk-aware HITL gate
@@ -19,15 +21,14 @@ import { MemoryFeedbackService } from '../../memoria/services/memory-feedback.se
 export class HitlPolicyService {
   /**
    * Returns true if this step requires human review.
-   * Triggers on explicit isHumanRequired flag OR if complaint riskLevel is 'high' or 'critical'.
+   * Only triggers on the explicit isHumanRequired flag — risk level does NOT
+   * override individual steps, it only adds context for the designated HITL step.
    */
   shouldRequireHumanReview(
     isHumanRequired: boolean,
-    riskLevel: string | null,
+    _riskLevel: string | null,
   ): boolean {
-    if (isHumanRequired) return true;
-    if (riskLevel === 'high' || riskLevel === 'critical') return true;
-    return false;
+    return isHumanRequired;
   }
 }
 
@@ -54,6 +55,8 @@ export class HumanReviewService {
     private readonly stepDefinitionRepo: Repository<StepDefinition>,
 
     private readonly memoryFeedback: MemoryFeedbackService,
+
+    private readonly timingEvents: TimingEventService,
 
     private readonly moduleRef: ModuleRef,
   ) {}
@@ -159,6 +162,13 @@ export class HumanReviewService {
     if (dto.approved) {
       try {
         const stepExec = await this.stepExecRepo.findOne({ where: { id: stepExecutionId } });
+        await this.timingEvents.emit(
+          'approved',
+          complaintId,
+          stepExec?.ticketExecutionId ?? null,
+          reviewerUserId,
+          review.reviewedAt ?? new Date(),
+        );
         if (stepExec && stepExec.status === StepExecutionStatus.WAITING_HUMAN) {
           stepExec.status = StepExecutionStatus.COMPLETED;
           stepExec.completedAt = new Date();
@@ -200,14 +210,11 @@ export class HumanReviewService {
 
             // Fire-and-forget: continue auto-advance for remaining steps
             if (nextStep) {
-              // Auto-advance remaining steps after human approval
-              setImmediate(async () => {
-                try {
-                  const svc = this.moduleRef.get('TicketExecutionService', { strict: false });
-                  if (svc?.autoAdvanceLoop) await svc.autoAdvanceLoop(execution.id);
-                } catch (e) {
-                  console.error('[HumanReview] auto-advance failed:', e);
-                }
+              setImmediate(() => {
+                const svc = this.moduleRef.get(TicketExecutionService, { strict: false });
+                svc.autoAdvanceLoop(execution.id).catch((e: unknown) =>
+                  console.error('[HumanReview] auto-advance failed:', e),
+                );
               });
             }
           }
@@ -223,13 +230,15 @@ export class HumanReviewService {
       where: { id: stepExecutionId },
       relations: ['ticketExecution', 'ticketExecution.complaint'],
     });
-    void this.memoryFeedback.persistFeedback(
-      aiGeneratedText,
-      dto.humanFinalText ?? aiGeneratedText,
-      diffSummary ?? '',
-      complaintId,
-      stepExecWithComplaint?.ticketExecution?.complaint?.tipologyId ?? null,
-    ).catch(err => console.error('[MemoryFeedback] persist failed', err));
+    void this.memoryFeedback
+      .persistFeedback(
+        aiGeneratedText,
+        humanFinalText ?? aiGeneratedText,
+        diffSummary ?? '',
+        complaintId,
+        stepExecWithComplaint?.ticketExecution?.complaint?.tipologyId ?? null,
+      )
+      .catch((err) => console.error('[MemoryFeedback] persist failed', err));
 
     return review;
   }

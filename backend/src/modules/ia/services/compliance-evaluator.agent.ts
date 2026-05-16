@@ -80,7 +80,8 @@ export class ComplianceEvaluatorAgent {
       draftResponse,
     };
 
-    const { system, user } = this.promptBuilder.buildCompliancePrompt(ctx);
+    const customSystemPrompt = input['customSystemPrompt'] as string | undefined;
+    const { system, user } = this.promptBuilder.buildCompliancePrompt(ctx, customSystemPrompt);
 
     // 4. Call LLM with fallback
     const result = await this.modelSelector.callWithFallback(

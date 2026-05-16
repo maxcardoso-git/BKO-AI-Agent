@@ -36,6 +36,23 @@ export class ComplaintUserNoteService {
     content: string,
     parameters?: Record<string, unknown> | null,
   ): Promise<ComplaintUserNote> {
+    // Append-only semantics: once a baseline note (v1) exists, new versions must
+    // include it as prefix. If the operator submits a fresh body (different field
+    // ordering after re-saving via /processar, or a Smart Note continuation), we
+    // auto-prepend the baseline so the original is preserved without surfacing
+    // a 400 to the UI.
+    const baseline = await this.noteRepo.findOne({
+      where: { complaintId, version: 1 },
+    });
+    if (baseline) {
+      if (content === baseline.content) {
+        return baseline;
+      }
+      if (!content.startsWith(baseline.content)) {
+        content = `${baseline.content}\n\n---\n\n${content}`;
+      }
+    }
+
     const note = await this.dataSource.transaction(async (manager) => {
       // Deactivate existing active notes
       await manager

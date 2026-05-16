@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../operacao/entities/user.entity';
 import { ObservabilityService } from '../services/observability.service';
@@ -43,6 +43,18 @@ export class ObservabilityController {
   @Roles(UserRole.ADMIN)
   getTokenTotals() {
     return this.observabilityService.getTokenTotals();
+  }
+
+  // ─── TMT — Tempo Médio de Tratamento ──────────────────────────────────────
+  // Accessible to admin and supervisor; supervisor needs operational visibility.
+
+  @Get('admin/observability/tmt')
+  @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
+  getTmt(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.observabilityService.getTmt(from, to);
   }
 
   // ─── Trace Explorer ───────────────────────────────────────────────────────

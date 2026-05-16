@@ -11,6 +11,7 @@ import { ComplaintUserNote } from './entities/complaint-user-note.entity';
 import { AccessToken } from './entities/access-token.entity';
 import { TicketLock } from './entities/ticket-lock.entity';
 import { TicketTimingEvent } from './entities/ticket-timing-event.entity';
+import { Tipology } from '../regulatorio/entities/tipology.entity';
 import { ComplaintService } from './services/complaint.service';
 import { DiscountService } from './services/discount.service';
 import { InvoiceService } from './services/invoice.service';
@@ -26,6 +27,9 @@ import { AccessTokenController } from './controllers/access-token.controller';
 import { TicketLockController } from './controllers/ticket-lock.controller';
 import { ComplaintUserNoteController } from './controllers/complaint-user-note.controller';
 import { AdminLocksController } from './controllers/admin-locks.controller';
+import { TurbinaImportService } from './services/turbina-import.service';
+import { TurbinaImportController } from './controllers/turbina-import.controller';
+import { IaModule } from '../ia/ia.module';
 
 @Module({
   imports: [
@@ -41,10 +45,12 @@ import { AdminLocksController } from './controllers/admin-locks.controller';
       AccessToken,
       TicketLock,
       TicketTimingEvent,
+      Tipology,
     ]),
+    IaModule,
   ],
-  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController, TicketLockController, ComplaintUserNoteController, AdminLocksController],
-  providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService, AccessTokenService, TicketLockService, ComplaintUserNoteService],
+  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController, TicketLockController, ComplaintUserNoteController, AdminLocksController, TurbinaImportController],
+  providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService, AccessTokenService, TicketLockService, ComplaintUserNoteService, TurbinaImportService],
   exports: [TypeOrmModule, TimingEventService, AccessTokenService],
 })
 export class OperacaoModule {}

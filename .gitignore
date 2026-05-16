@@ -3,3 +3,18 @@ dist
 .env
 *.env.local
 .DS_Store
+
+# Editor / IDE
+.vscode/
+
+# Build artifacts
+*.tsbuildinfo
+backend/tsconfig.build.tsbuildinfo
+
+# Database dumps (contain production data — do NOT commit)
+*.dump
+*.sql.gz
+bkoagent_dump.dump
+
+# Local data exports (not versioned)
+Turbina/

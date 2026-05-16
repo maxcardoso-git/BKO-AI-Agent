@@ -30,6 +30,16 @@ export class ComplaintFilterDto {
   @IsString()
   search?: string;
 
+  /** ISO 8601 date — only complaints created at or after this instant */
+  @IsOptional()
+  @IsString()
+  createdAfter?: string;
+
+  /** ISO 8601 date — only complaints created strictly before this instant */
+  @IsOptional()
+  @IsString()
+  createdBefore?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsInt()
