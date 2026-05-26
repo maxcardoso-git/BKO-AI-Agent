@@ -14,7 +14,7 @@ BKO Agent is built in ten phases following the natural dependency order of the s
 - [x] **Phase 6: Human Review Pipeline** - HITL editor, step processor UI, artifact viewer, diff capture, steps designer
 - [x] **Phase 7: Polish & Compliance** - Memory & learning, personas, configuration admin, observability dashboards, security/LGPD hardening
 - [x] **Phase 8: Schema & Pipeline Simplification** - DB migrations for operator note + human_review extensions; pipeline reduced to 14 steps; LoadComplaint and DraftFinalResponse updated to consume operator note
-- [ ] **Phase 9: Operator UI & RBAC** - `/processar` screen with note-taking, search, progress tracking; sidebar routing rules per role
+- [x] **Phase 9: Operator UI & RBAC** - `/processar` screen with note-taking, search, progress tracking; sidebar routing rules per role
 - [x] **Phase 10: Validation UI & Training Memory** - `/processar/:protocolo/validar` approve/correct/reject flow; feedback persisted to HumanFeedbackMemory; admin feedback audit page
 
 ## Phase Details
