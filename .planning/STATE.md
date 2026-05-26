@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 ## Current Position
 
 Phase: 10 — Validation UI, Training Memory & Audit Reports
-Plan: 02 of ~4 in phase
-Status: In progress — 10-02 complete
-Last activity: 2026-05-26 — Completed 10-02-PLAN.md (draft prompt memory injection + operatorNote loadComplaint fix)
+Plan: 03 of ~4 in phase
+Status: In progress — 10-03 complete
+Last activity: 2026-05-26 — Completed 10-03-PLAN.md (frontend validation UI, admin audit pages, observability panel)
 
-Progress: v1 [██████████] 100% (23/23 plans) | v2 [█████████░] ~93% (13/14 plans est.)
+Progress: v1 [██████████] 100% (23/23 plans) | v2 [█████████░] ~96% (14/15 plans est.)
 
 Post-09 work shipped (not tracked as plans):
 - d3b8256 feat: pipeline enhancements, invoice/turbina import, smart-note, compliance prompt fixes
@@ -164,6 +164,9 @@ Recent decisions affecting current work:
 - 10-02: DraftFinalResponse uses findSimilarFeedback('correction') not findSimilarCorrections — rejections excluded from LLM injection by design
 - 10-02: MEMORY_INJECTION_LIMIT env var (default 3) controls correction injection count at runtime
 - 10-02: injectedCorrections persisted in draft_response artifact content (not separate endpoint) — co-located audit trail, validation UI reads it directly
+- 10-03: useRequireAuth returns persistHydrated not isLoading — use !persistHydrated || !hasAccess as auth gate pattern
+- 10-03: pullByProtocol(rawProtocol) accepts explicit arg to avoid useState timing issues in retry useEffect
+- 10-03: RichTextArea is default export; no shadcn Table in BKOConsole (use native HTML table)
 
 ### v2 Context
 
@@ -186,5 +189,5 @@ None at v2 start.
 ## Session Continuity
 
 Last session: 2026-05-26
-Stopped at: Completed 10-02-PLAN.md (draft prompt memory injection + operatorNote fix)
+Stopped at: Completed 10-03-PLAN.md (frontend validation UI + admin pages + observability panel)
 Resume file: None
