@@ -10,9 +10,9 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 ## Current Position
 
 Phase: 10 — Validation UI, Training Memory & Audit Reports
-Plan: 01 of ~4 in phase
-Status: In progress — 10-01 complete
-Last activity: 2026-05-26 — Completed 10-01-PLAN.md (backend foundation: 3-branch HITL, admin endpoints, migration)
+Plan: 02 of ~4 in phase
+Status: In progress — 10-02 complete
+Last activity: 2026-05-26 — Completed 10-02-PLAN.md (draft prompt memory injection + operatorNote loadComplaint fix)
 
 Progress: v1 [██████████] 100% (23/23 plans) | v2 [█████████░] ~93% (13/14 plans est.)
 
@@ -160,6 +160,10 @@ Recent decisions affecting current work:
 - 10-01: Corrected branch resumes auto-advance (same as approved) — "correct and go ahead" semantics
 - 10-01: Approved path does NOT persist memory feedback — only corrections/rejections are training signals
 - 10-01: Complaint + TicketLock added to ExecucaoModule TypeOrmModule.forFeature for HumanReviewService lock release + responsavelFinal update
+- 10-02: loadComplaint now queries complaint_user_note (noteRepo) — operatorNote gap closed; PromptBuilderService NOTA DO OPERADOR section was dormant since Phase 8-03
+- 10-02: DraftFinalResponse uses findSimilarFeedback('correction') not findSimilarCorrections — rejections excluded from LLM injection by design
+- 10-02: MEMORY_INJECTION_LIMIT env var (default 3) controls correction injection count at runtime
+- 10-02: injectedCorrections persisted in draft_response artifact content (not separate endpoint) — co-located audit trail, validation UI reads it directly
 
 ### v2 Context
 
@@ -182,5 +186,5 @@ None at v2 start.
 ## Session Continuity
 
 Last session: 2026-05-26
-Stopped at: Completed 10-01-PLAN.md (backend foundation)
+Stopped at: Completed 10-02-PLAN.md (draft prompt memory injection + operatorNote fix)
 Resume file: None
