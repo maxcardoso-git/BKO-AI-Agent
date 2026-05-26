@@ -10,11 +10,15 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 ## Current Position
 
 Phase: 10 — Validation UI, Training Memory & Audit Reports
-Plan: —
-Status: Phase 9 complete — ready to plan Phase 10
-Last activity: 2026-05-06 — Completed Phase 9 (Operator UI, Token Auth & RBAC — all 4 plans)
+Plan: 01 of ~4 in phase
+Status: In progress — 10-01 complete
+Last activity: 2026-05-26 — Completed 10-01-PLAN.md (backend foundation: 3-branch HITL, admin endpoints, migration)
 
-Progress: v1 [██████████] 100% (23/23 plans) | v2 [████████░░] 89% (8/9 plans)
+Progress: v1 [██████████] 100% (23/23 plans) | v2 [█████████░] ~93% (13/14 plans est.)
+
+Post-09 work shipped (not tracked as plans):
+- d3b8256 feat: pipeline enhancements, invoice/turbina import, smart-note, compliance prompt fixes
+- 0b90c90 wip: 09 hotfixes (route-roles, middleware, app-layout) deployed at 72.61.52.70
 
 ## Performance Metrics
 
@@ -151,6 +155,11 @@ Recent decisions affecting current work:
 - 09-01: TicketLockService uses DataSource.transaction() with DELETE+INSERT — never plain save() on unique complaintId
 - 09-01: ComplaintUserNoteService emits note_saved outside transaction with try/catch — timing event failure is non-fatal
 - 09-01: GET /api/executions/:execId/steps restricted to SUPERVISOR/ADMIN via @Roles — OPERATOR gets 403 from global RolesGuard
+- 10-01: MemoryFeedbackService embeds aiText (not humanText) — retrieval is "find corrections of drafts similar to this new AI draft"
+- 10-01: Rejection memory weight=0.5 — weaker signal than correction (no replacement text); down-weight for retrieval ranking
+- 10-01: Corrected branch resumes auto-advance (same as approved) — "correct and go ahead" semantics
+- 10-01: Approved path does NOT persist memory feedback — only corrections/rejections are training signals
+- 10-01: Complaint + TicketLock added to ExecucaoModule TypeOrmModule.forFeature for HumanReviewService lock release + responsavelFinal update
 
 ### v2 Context
 
@@ -172,6 +181,6 @@ None at v2 start.
 
 ## Session Continuity
 
-Last session: 2026-05-06T20:30:00Z
-Stopped at: Completed 09-01-PLAN.md — backend token auth, lock, notes, RBAC
+Last session: 2026-05-26
+Stopped at: Completed 10-01-PLAN.md (backend foundation)
 Resume file: None
