@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { Artifact } from '../entities/artifact.entity';
 import { AuditLog } from '../entities/audit-log.entity';
 import { Complaint } from '../../operacao/entities/complaint.entity';
+import { ComplaintUserNote } from '../../operacao/entities/complaint-user-note.entity';
 import { Persona } from '../../regulatorio/entities/persona.entity';
 import { Tipology } from '../../regulatorio/entities/tipology.entity';
 import { CaseMemory } from '../../memoria/entities/case-memory.entity';
@@ -70,6 +71,9 @@ export class SkillRegistryService {
 
     @InjectRepository(HumanFeedbackMemory)
     private readonly humanFeedbackRepo: Repository<HumanFeedbackMemory>,
+
+    @InjectRepository(ComplaintUserNote)
+    private readonly noteRepo: Repository<ComplaintUserNote>,
 
     @InjectRepository(SkillDefinition)
     private readonly skillDefinitionRepo: Repository<SkillDefinition>,
@@ -254,26 +258,46 @@ export class SkillRegistryService {
           const tipologyId = (input['tipologyId'] as string) ?? '';
           const complaintText = (input['normalizedText'] as string) ?? (input['complaintText'] as string) ?? '';
           let memoryAugmentedInput = input;
-          try {
-            const embeddingModel = await this.modelSelector.getEmbeddingModel();
-            const { embedding: memEmbedding } = await embed({ model: embeddingModel, value: complaintText });
-            const [similarCasesRaw, humanCorrectionsRaw, stylePatternsRaw] = await Promise.all([
-              this.memoryRetrieval.findSimilarCases(memEmbedding, tipologyId, 3),
-              this.memoryRetrieval.findSimilarCorrections(memEmbedding, tipologyId, 3),
-              this.memoryRetrieval.findStylePatterns(tipologyId, 5),
-            ]);
-            const stylePatterns = stylePatternsRaw.map(p => ({
-              expression: p.expressionText,
-              type: p.expressionType as 'approved' | 'forbidden',
-            }));
-            memoryAugmentedInput = {
-              ...input,
-              similarCases: similarCasesRaw,
-              humanCorrections: humanCorrectionsRaw,
-              stylePatterns,
-            };
-          } catch (memErr) {
-            this.logger.warn(`DraftFinalResponse: memory retrieval failed, continuing without memory context. Error: ${memErr}`);
+          // Declare injectedCorrections outside try so it is accessible for artifact persistence
+          let injectedCorrections: Array<{
+            aiText: string;
+            humanText: string;
+            diffDescription: string;
+            similarity: number | null;
+          }> = [];
+          if (!tipologyId) {
+            this.logger.warn('DraftFinalResponse: tipologyId is empty, skipping memory retrieval');
+          } else {
+            try {
+              const injectionLimit = Number(process.env.MEMORY_INJECTION_LIMIT ?? '3');
+              const embeddingModel = await this.modelSelector.getEmbeddingModel();
+              const { embedding: memEmbedding } = await embed({ model: embeddingModel, value: complaintText });
+              const [similarCasesRaw, humanCorrectionsRaw, stylePatternsRaw] = await Promise.all([
+                this.memoryRetrieval.findSimilarCases(memEmbedding, tipologyId, 3),
+                this.memoryRetrieval.findSimilarFeedback(memEmbedding, tipologyId, 'correction', injectionLimit),
+                this.memoryRetrieval.findStylePatterns(tipologyId, 5),
+              ]);
+              const stylePatterns = stylePatternsRaw.map(p => ({
+                expression: p.expressionText,
+                type: p.expressionType as 'approved' | 'forbidden',
+              }));
+              // Sanitize corrections: truncate text fields for prompt token budget
+              injectedCorrections = humanCorrectionsRaw.map(c => ({
+                aiText: c.aiText?.slice(0, 800) ?? '',
+                humanText: c.humanText?.slice(0, 800) ?? '',
+                diffDescription: c.diffDescription?.slice(0, 500) ?? '',
+                similarity: typeof c.similarity === 'number' ? Number(c.similarity.toFixed(3)) : null,
+              }));
+              this.logger.log(`[DraftFinalResponse] Injected ${injectedCorrections.length} past corrections (tipologyId=${tipologyId})`);
+              memoryAugmentedInput = {
+                ...input,
+                similarCases: similarCasesRaw,
+                humanCorrections: injectedCorrections,
+                stylePatterns,
+              };
+            } catch (memErr) {
+              this.logger.warn(`DraftFinalResponse: memory retrieval failed, continuing without memory context. Error: ${memErr}`);
+            }
           }
           const draftCustomPrompt = await this.getCustomSystemPrompt('DraftFinalResponse');
           const result = await this.draftGenerator.generate({ ...memoryAugmentedInput, customSystemPrompt: draftCustomPrompt });
@@ -288,7 +312,7 @@ export class SkillRegistryService {
               latencyMs: (result.latencyMs as number) ?? 0,
             });
           }
-          // Persist ART-08 draft_response artifact
+          // Persist ART-08 draft_response artifact — includes injectedCorrections for validation UI
           const draftArtifact = await this.artifactRepo.save(
             this.artifactRepo.create({
               artifactType: 'draft_response',
@@ -297,6 +321,8 @@ export class SkillRegistryService {
                 templateUsed: result.templateUsed ?? null,
                 mandatoryFieldsCount: result.mandatoryFieldsCount ?? 0,
                 kbChunksUsed: result.kbChunksUsed ?? 0,
+                injectedCorrections,                              // array of {aiText, humanText, diffDescription, similarity}
+                injectedCorrectionsCount: injectedCorrections.length, // convenience field for UI badge
               },
               version: 1,
               stepExecutionId,
@@ -412,6 +438,21 @@ export class SkillRegistryService {
     });
     if (!complaint) return { error: 'Complaint not found', complaintId };
 
+    // PIPE-03: Load the most recent active operator note for this complaint.
+    // Failure is non-fatal — note absence must not block the pipeline.
+    let operatorNote: string | null = null;
+    let operatorNoteParameters: Record<string, unknown> | null = null;
+    try {
+      const note = await this.noteRepo.findOne({
+        where: { complaintId, isActive: true },
+        order: { version: 'DESC' },
+      });
+      operatorNote = note?.content ?? null;
+      operatorNoteParameters = note?.parameters ?? null;
+    } catch (noteErr) {
+      this.logger.warn(`LoadComplaint: failed to load complaint_user_note for complaintId=${complaintId}. Error: ${noteErr}`);
+    }
+
     const artifact = await this.artifactRepo.save(
       this.artifactRepo.create({
         artifactType: 'parsed_complaint',
@@ -443,6 +484,9 @@ export class SkillRegistryService {
       tipologyKey: complaint.tipology?.key ?? null,
       rawText: complaint.rawText,
       artifactId: artifact.id,
+      // PIPE-03: operator note — feeds PromptBuilderService NOTA DO OPERADOR section
+      operatorNote,
+      operatorNoteParameters,
     };
   }
 

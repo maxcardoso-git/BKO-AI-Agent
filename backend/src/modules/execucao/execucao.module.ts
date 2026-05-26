@@ -16,6 +16,7 @@ import { AuditLog } from './entities/audit-log.entity';
 import { Tipology } from '../regulatorio/entities/tipology.entity';
 import { Complaint } from '../operacao/entities/complaint.entity';
 import { TicketLock } from '../operacao/entities/ticket-lock.entity';
+import { ComplaintUserNote } from '../operacao/entities/complaint-user-note.entity';
 import { ExecutionService } from './services/execution.service';
 import { TicketExecutionService } from './services/ticket-execution.service';
 import { SkillRegistryService } from './services/skill-registry.service';
@@ -43,6 +44,7 @@ import { AdminAuditService } from './services/admin-audit.service';
       Tipology,
       Complaint,
       TicketLock,
+      ComplaintUserNote,
     ]),
     OrquestracaoModule,
     OperacaoModule,
