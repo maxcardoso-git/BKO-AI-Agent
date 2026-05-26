@@ -175,11 +175,31 @@ export class PromptBuilderService {
     }
 
     if (ctx.humanCorrections && ctx.humanCorrections.length > 0) {
-      system.push('', '## Correcoes humanas em respostas anteriores similares:');
-      for (const h of ctx.humanCorrections) {
-        system.push(`- Correcao (${(h.similarity * 100).toFixed(0)}% similar): ${h.diffDescription}`);
-        system.push(`  Versao humana aprovada: ${h.humanText.slice(0, 300)}`);
-      }
+      const correctionLines: string[] = [];
+      ctx.humanCorrections.forEach((c, idx) => {
+        const sim = c.similarity != null ? ` (similaridade ${(c.similarity * 100).toFixed(0)}%)` : '';
+        correctionLines.push(
+          `### Exemplo ${idx + 1}${sim}`,
+          `**Rascunho IA original:**`,
+          c.aiText,
+          ``,
+          `**Versao corrigida pelo operador:**`,
+          c.humanText,
+          ``,
+          `**Resumo da correcao:**`,
+          c.diffDescription,
+          `---`,
+        );
+      });
+      system.push(
+        '',
+        '## Exemplos de Correcoes Humanas Anteriores (Aprendizado)',
+        '',
+        'Os exemplos abaixo mostram como operadores corrigiram rascunhos previos para casos similares.',
+        'USE essas correcoes como guia: evite os padroes que foram corrigidos e adote o estilo das versoes humanas.',
+        '',
+        ...correctionLines,
+      );
     }
 
     if (ctx.stylePatterns && ctx.stylePatterns.length > 0) {
