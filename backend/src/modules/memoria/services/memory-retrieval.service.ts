@@ -59,6 +59,7 @@ export class MemoryRetrievalService {
 
   /**
    * Finds similar human corrections from human_feedback_memory using pgvector cosine similarity.
+   * Filters to correction-type rows only (feedbackType='correction' OR legacy rows where IS NULL).
    * ORDER BY cosine distance ASC (lower = more similar).
    */
   async findSimilarCorrections(
@@ -72,11 +73,44 @@ export class MemoryRetrievalService {
               1 - (embedding <=> $1::vector) AS similarity
        FROM "human_feedback_memory"
        WHERE "tipologyId" = $2
+         AND ("feedbackType" = 'correction' OR "feedbackType" IS NULL)
        ORDER BY embedding <=> $1::vector ASC
        LIMIT $3`,
       [vectorParam, tipologyId, limit],
     );
     return results as SimilarCorrectionResult[];
+  }
+
+  /**
+   * Finds similar past feedback (corrections or rejections) by embedding + tipology + feedbackType.
+   * Pass feedbackType=null to retrieve both types.
+   * Returns rejection reasons alongside diff descriptions so the LLM can avoid past failures.
+   */
+  async findSimilarFeedback(
+    embedding: number[],
+    tipologyId: string,
+    feedbackType: 'correction' | 'rejection' | null = null,
+    limit = 3,
+  ): Promise<Array<SimilarCorrectionResult & { feedbackType: string | null; rejectionReason: string | null }>> {
+    const vectorParam = pgvector.toSql(embedding);
+    const params: unknown[] = [vectorParam, tipologyId];
+    let whereType = '';
+    if (feedbackType) {
+      params.push(feedbackType);
+      whereType = ` AND "feedbackType" = $${params.length}`;
+    }
+    params.push(limit);
+    const results = await this.dataSource.query(
+      `SELECT id, "aiText", "humanText", "diffDescription", "correctionCategory",
+              "feedbackType", "rejectionReason",
+              1 - (embedding <=> $1::vector) AS similarity
+       FROM "human_feedback_memory"
+       WHERE "tipologyId" = $2${whereType}
+       ORDER BY embedding <=> $1::vector ASC
+       LIMIT $${params.length}`,
+      params,
+    );
+    return results;
   }
 
   /**

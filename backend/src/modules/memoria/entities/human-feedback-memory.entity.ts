@@ -26,6 +26,12 @@ export class HumanFeedbackMemory {
   @Column({ type: 'varchar', nullable: true })
   correctionCategory: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  feedbackType: 'correction' | 'rejection' | null;
+
+  @Column({ type: 'text', nullable: true })
+  rejectionReason: string | null;
+
   @Column({ type: 'float', default: 1.0 })
   correctionWeight: number;
 
