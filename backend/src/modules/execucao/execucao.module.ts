@@ -14,6 +14,8 @@ import { TokenUsage } from './entities/token-usage.entity';
 import { HumanReview } from './entities/human-review.entity';
 import { AuditLog } from './entities/audit-log.entity';
 import { Tipology } from '../regulatorio/entities/tipology.entity';
+import { Complaint } from '../operacao/entities/complaint.entity';
+import { TicketLock } from '../operacao/entities/ticket-lock.entity';
 import { ExecutionService } from './services/execution.service';
 import { TicketExecutionService } from './services/ticket-execution.service';
 import { SkillRegistryService } from './services/skill-registry.service';
@@ -35,6 +37,8 @@ import { ObservabilityController } from './controllers/observability.controller'
       HumanReview,
       AuditLog,
       Tipology,
+      Complaint,
+      TicketLock,
     ]),
     OrquestracaoModule,
     OperacaoModule,

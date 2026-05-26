@@ -7,6 +7,7 @@ import {
   Request,
   HttpException,
   HttpCode,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -47,6 +48,24 @@ export class HumanReviewController {
     }
     const reviewerUserId = req.user?.sub ?? req.user?.id ?? 'unknown';
     return this.humanReviewService.createReview(stepExecId, complaintId, reviewerUserId, dto);
+  }
+
+  /**
+   * POST /api/complaints/:complaintId/validate
+   * Convenience endpoint — resolves the latest paused HITL step from complaintId
+   * so the UI only needs complaintId (resolved from protocol lookup), not stepExecId.
+   */
+  @Post('complaints/:complaintId/validate')
+  @HttpCode(200)
+  async validate(
+    @Param('complaintId') complaintId: string,
+    @Body() dto: SubmitReviewDto,
+    @Request() req: { user?: { sub?: string; id?: string } },
+  ): Promise<HumanReview> {
+    const stepExec = await this.humanReviewService.findLatestPausedHumanStepExec(complaintId);
+    if (!stepExec) throw new NotFoundException('No paused review for this complaint');
+    const reviewerUserId = req.user?.sub ?? req.user?.id ?? 'unknown';
+    return this.humanReviewService.createReview(stepExec.id, complaintId, reviewerUserId, dto);
   }
 
   /**

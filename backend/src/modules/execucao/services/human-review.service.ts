@@ -7,6 +7,8 @@ import { StepExecution, StepExecutionStatus } from '../entities/step-execution.e
 import { TicketExecution, TicketExecutionStatus } from '../entities/ticket-execution.entity';
 import { StepDefinition } from '../../orquestracao/entities/step-definition.entity';
 import { Artifact } from '../entities/artifact.entity';
+import { Complaint } from '../../operacao/entities/complaint.entity';
+import { TicketLock } from '../../operacao/entities/ticket-lock.entity';
 import { diffWords } from 'diff';
 import { SubmitReviewDto } from '../dto/submit-review.dto';
 import { MemoryFeedbackService } from '../../memoria/services/memory-feedback.service';
@@ -59,6 +61,12 @@ export class HumanReviewService {
     private readonly timingEvents: TimingEventService,
 
     private readonly moduleRef: ModuleRef,
+
+    @InjectRepository(Complaint)
+    private readonly complaintRepo: Repository<Complaint>,
+
+    @InjectRepository(TicketLock)
+    private readonly lockRepo: Repository<TicketLock>,
   ) {}
 
   /**
@@ -76,11 +84,33 @@ export class HumanReviewService {
   }
 
   /**
+   * Finds the most recently paused human-review step for a given complaint.
+   * Used by the convenience POST /api/complaints/:complaintId/validate endpoint
+   * so the UI only needs complaintId (resolved from protocol), not stepExecId.
+   */
+  async findLatestPausedHumanStepExec(complaintId: string): Promise<StepExecution | null> {
+    return this.stepExecRepo
+      .createQueryBuilder('se')
+      .innerJoin('se.ticketExecution', 'te')
+      .where('te.complaintId = :cid', { cid: complaintId })
+      .andWhere('se.status = :s', { s: StepExecutionStatus.WAITING_HUMAN })
+      .orderBy('se.createdAt', 'DESC')
+      .getOne();
+  }
+
+  /**
    * Creates a HumanReview row for the given step execution.
-   * - Loads aiGeneratedText from ART-09 (final_response artifact)
-   * - Computes diff if humanFinalText differs from aiGeneratedText
-   * - Updates ART-11 (human_diff artifact) content with real diff data
-   * - Returns the saved HumanReview
+   * Handles three decision branches: approved / corrected / rejected.
+   *
+   * Common to all 3 branches:
+   *   - Emits 'decision_made' timing event with reviewerUserId
+   *   - Sets complaint.responsavelFinal = reviewerUserId
+   *   - Releases ticket lock
+   *
+   * Branch-specific:
+   *   - approved:  marks step COMPLETED, resumes auto-advance loop
+   *   - corrected: marks step COMPLETED with human-corrected output; persists memory (correction)
+   *   - rejected:  marks step FAILED, cancels ticket_execution; persists memory (rejection)
    */
   async createReview(
     stepExecutionId: string,
@@ -119,29 +149,46 @@ export class HumanReviewService {
       diffSummary = JSON.stringify({ changesCount, additions, removals });
     }
 
-    // 3. Persist HumanReview row
+    // 3. Derive decision from new field OR legacy approved boolean
+    //    If neither provided, fall through to 'corrected' (safest default when no approval signal)
+    const decision: 'approved' | 'corrected' | 'rejected' =
+      dto.decision ?? (dto.approved ? 'approved' : 'corrected');
+
+    // Validation guards
+    if (decision === 'rejected' && !dto.rejectionReason?.trim()) {
+      throw new HttpException('rejectionReason is required when decision=rejected', 400);
+    }
+    if (decision === 'corrected' && !humanFinalText?.trim()) {
+      throw new HttpException('humanFinal is required when decision=corrected', 400);
+    }
+
+    const statusMap: Record<typeof decision, HumanReviewStatus> = {
+      approved: HumanReviewStatus.APPROVED,
+      corrected: HumanReviewStatus.CORRECTED,
+      rejected: HumanReviewStatus.REJECTED,
+    };
+
+    // 4. Persist HumanReview row
     const review = await this.reviewRepo.save(
       this.reviewRepo.create({
         stepExecutionId,
         complaintId,
         reviewerUserId,
-        status: dto.approved
-          ? HumanReviewStatus.APPROVED
-          : HumanReviewStatus.PENDING,
+        status: statusMap[decision],
         aiGeneratedText,
         humanFinalText,
         diffSummary,
         correctionReason: dto.correctionReason ?? null,
+        rejectionReason: decision === 'rejected' ? (dto.rejectionReason ?? null) : null,
         checklistItems: checklistItems ?? null,
         observations: dto.observations ?? null,
         checklistCompleted:
-          checklistItems != null &&
-          Object.keys(checklistItems).length > 0,
-        reviewedAt: dto.approved ? new Date() : null,
+          checklistItems != null && Object.keys(checklistItems).length > 0,
+        reviewedAt: new Date(), // ALL 3 decisions are "reviewed" actions
       }),
     );
 
-    // 4. Update ART-11 (human_diff artifact) with real diff data
+    // 5. Update ART-11 (human_diff artifact) with real diff data
     const humanDiffArtifact = await this.artifactRepo.findOne({
       where: { complaintId, artifactType: 'human_diff' },
       order: { createdAt: 'DESC' },
@@ -158,17 +205,35 @@ export class HumanReviewService {
       await this.artifactRepo.save(humanDiffArtifact);
     }
 
-    // 5. If approved, resume execution: mark step as completed and advance to next step
-    if (dto.approved) {
+    // 6. ALL decisions: emit decision_made timing event, release lock, set responsavelFinal
+    const stepExecForEvents = await this.stepExecRepo.findOne({
+      where: { id: stepExecutionId },
+      relations: ['ticketExecution', 'ticketExecution.complaint'],
+    });
+    const executionId = stepExecForEvents?.ticketExecutionId ?? null;
+    const tipologyId = stepExecForEvents?.ticketExecution?.complaint?.tipologyId ?? null;
+    const now = new Date();
+
+    try {
+      // 6.a decision_made timing event (all decisions — feeds /admin/observability/human-review-avg-time)
+      await this.timingEvents.emit('decision_made', complaintId, executionId, reviewerUserId, now);
+
+      // 6.b Set complaint.responsavelFinal = reviewer (audit attribution)
+      await this.complaintRepo.update({ id: complaintId }, { responsavelFinal: reviewerUserId });
+
+      // 6.c Release lock — direct repo.delete avoids cross-module role check;
+      //     the operator who just decided is implicitly authorized.
+      await this.lockRepo.delete({ complaintId });
+    } catch (err) {
+      console.error('[HumanReviewService] common-side-effects failed', err);
+      // Non-fatal — review row is already saved; admin can repair via /admin/audit
+    }
+
+    // 7. Branch-specific resumption / cancellation logic
+    if (decision === 'approved') {
       try {
         const stepExec = await this.stepExecRepo.findOne({ where: { id: stepExecutionId } });
-        await this.timingEvents.emit(
-          'approved',
-          complaintId,
-          stepExec?.ticketExecutionId ?? null,
-          reviewerUserId,
-          review.reviewedAt ?? new Date(),
-        );
+        await this.timingEvents.emit('approved', complaintId, executionId, reviewerUserId, now);
         if (stepExec && stepExec.status === StepExecutionStatus.WAITING_HUMAN) {
           stepExec.status = StepExecutionStatus.COMPLETED;
           stepExec.completedAt = new Date();
@@ -193,7 +258,7 @@ export class HumanReviewService {
 
             // Accumulate output in metadata
             const meta = (execution.metadata ?? {}) as Record<string, unknown>;
-            const stepOutputs = ((meta.stepOutputs ?? {}) as Record<string, unknown>);
+            const stepOutputs = (meta.stepOutputs ?? {}) as Record<string, unknown>;
             stepOutputs[execution.currentStepKey!] = stepExec.output;
             meta.stepOutputs = stepOutputs;
 
@@ -220,25 +285,118 @@ export class HumanReviewService {
           }
         }
       } catch (err) {
-        console.error('[HumanReviewService] Failed to resume execution after review', err);
+        console.error('[HumanReviewService] Failed to resume execution after approve', err);
       }
     }
 
-    // 6. Fire-and-forget: persist human feedback for future memory retrieval (MEM-04)
-    // Load stepExec to get tipologyId via ticketExecution.complaint relation
-    const stepExecWithComplaint = await this.stepExecRepo.findOne({
-      where: { id: stepExecutionId },
-      relations: ['ticketExecution', 'ticketExecution.complaint'],
-    });
-    void this.memoryFeedback
-      .persistFeedback(
-        aiGeneratedText,
-        humanFinalText ?? aiGeneratedText,
-        diffSummary ?? '',
-        complaintId,
-        stepExecWithComplaint?.ticketExecution?.complaint?.tipologyId ?? null,
-      )
-      .catch((err) => console.error('[MemoryFeedback] persist failed', err));
+    if (decision === 'corrected') {
+      try {
+        const stepExec = await this.stepExecRepo.findOne({ where: { id: stepExecutionId } });
+        if (stepExec && stepExec.status === StepExecutionStatus.WAITING_HUMAN) {
+          stepExec.status = StepExecutionStatus.COMPLETED;
+          stepExec.completedAt = new Date();
+          stepExec.output = {
+            finalResponse: humanFinalText!,
+            source: 'human_corrected',
+            aiDraft: aiGeneratedText,
+            correctionReason: dto.correctionReason,
+          };
+          await this.stepExecRepo.save(stepExec);
+
+          // Resume execution (same logic as approve — correction means "go ahead with human version")
+          const execution = await this.ticketExecRepo.findOne({
+            where: { id: stepExec.ticketExecutionId },
+          });
+          if (execution && execution.status === TicketExecutionStatus.PAUSED_HUMAN) {
+            const steps = await this.stepDefinitionRepo.find({
+              where: { capabilityVersionId: execution.capabilityVersionId, isActive: true },
+              order: { stepOrder: 'ASC' },
+            });
+            const currentIdx = steps.findIndex((s) => s.key === execution.currentStepKey);
+            const nextStep = steps[currentIdx + 1] ?? null;
+
+            const meta = (execution.metadata ?? {}) as Record<string, unknown>;
+            const stepOutputs = (meta.stepOutputs ?? {}) as Record<string, unknown>;
+            stepOutputs[execution.currentStepKey!] = stepExec.output;
+            meta.stepOutputs = stepOutputs;
+
+            execution.status = TicketExecutionStatus.RUNNING;
+            execution.currentStepKey = nextStep?.key ?? null;
+            execution.metadata = meta;
+
+            if (!nextStep) {
+              execution.status = TicketExecutionStatus.COMPLETED;
+              execution.completedAt = new Date();
+            }
+
+            await this.ticketExecRepo.save(execution);
+
+            if (nextStep) {
+              setImmediate(() => {
+                const svc = this.moduleRef.get(TicketExecutionService, { strict: false });
+                svc.autoAdvanceLoop(execution.id).catch((e: unknown) =>
+                  console.error('[HumanReview] auto-advance failed after correction:', e),
+                );
+              });
+            }
+          }
+        }
+      } catch (err) {
+        console.error('[HumanReviewService] Failed to resume execution after correction', err);
+      }
+    }
+
+    if (decision === 'rejected') {
+      try {
+        const stepExec = await this.stepExecRepo.findOne({ where: { id: stepExecutionId } });
+        if (stepExec) {
+          stepExec.status = StepExecutionStatus.FAILED;
+          stepExec.completedAt = new Date();
+          stepExec.errorMessage = `Rejected by operator: ${dto.rejectionReason ?? ''}`;
+          stepExec.output = {
+            source: 'human_rejected',
+            aiDraft: aiGeneratedText,
+            rejectionReason: dto.rejectionReason ?? null,
+          };
+          await this.stepExecRepo.save(stepExec);
+        }
+        // Cancel the ticket execution — operator decided draft cannot be salvaged.
+        if (executionId) {
+          await this.ticketExecRepo.update(
+            { id: executionId },
+            { status: TicketExecutionStatus.CANCELLED, completedAt: new Date() },
+          );
+        }
+      } catch (err) {
+        console.error('[HumanReviewService] Failed to cancel execution after reject', err);
+      }
+    }
+
+    // 8. Persist human feedback for future memory retrieval (corrections + rejections only).
+    //    Approved path intentionally does NOT persist — only negative signals train the model.
+    //
+    //    Rejection persistence semantics:
+    //      humanText = '' (no human replacement text exists for rejections)
+    //      diffDescription = rejectionReason (the WHY of rejection — used by prompt builder similarity search)
+    //      rejectionReason column = same value (used by /admin/feedback for display)
+    //    Dual-write is intentional: diffDescription is the generic field for prompt builder;
+    //    rejectionReason is the explicit field that downstream consumers should prefer.
+    if (decision === 'corrected' || decision === 'rejected') {
+      void this.memoryFeedback
+        .persistFeedback({
+          aiText: aiGeneratedText,
+          humanText: decision === 'corrected' ? (humanFinalText ?? '') : '',
+          diffDescription:
+            decision === 'rejected'
+              ? (dto.rejectionReason ?? '')
+              : (dto.correctionReason ?? diffSummary ?? ''),
+          complaintId,
+          tipologyId,
+          feedbackType: decision === 'corrected' ? 'correction' : 'rejection',
+          rejectionReason: decision === 'rejected' ? (dto.rejectionReason ?? null) : null,
+        })
+        .catch((err) => console.error('[MemoryFeedback] persist failed', err));
+    }
 
     return review;
   }

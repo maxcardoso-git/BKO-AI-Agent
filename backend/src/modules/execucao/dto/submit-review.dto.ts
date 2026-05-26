@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsObject } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsObject, IsIn, MaxLength } from 'class-validator';
 
 export class SubmitReviewDto {
   @IsString()
@@ -27,6 +27,19 @@ export class SubmitReviewDto {
   @IsOptional()
   observations?: string | null;
 
+  // Legacy boolean field — kept for backward compat (old clients send approved:true)
   @IsBoolean()
-  approved: boolean;
+  @IsOptional()
+  approved?: boolean;
+
+  // New explicit decision field (Phase 10+).
+  // If absent, falls back to legacy approved boolean: approved=true -> 'approved', else 'corrected'
+  @IsOptional()
+  @IsIn(['approved', 'corrected', 'rejected'])
+  decision?: 'approved' | 'corrected' | 'rejected';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  rejectionReason?: string;
 }
