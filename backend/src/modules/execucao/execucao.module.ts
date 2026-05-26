@@ -25,6 +25,10 @@ import { ExecutionController } from './controllers/execution.controller';
 import { TicketExecutionController } from './controllers/ticket-execution.controller';
 import { HumanReviewController } from './controllers/human-review.controller';
 import { ObservabilityController } from './controllers/observability.controller';
+import { AdminFeedbackController } from './controllers/admin-feedback.controller';
+import { AdminAuditController } from './controllers/admin-audit.controller';
+import { AdminFeedbackService } from './services/admin-feedback.service';
+import { AdminAuditService } from './services/admin-audit.service';
 
 @Module({
   imports: [
@@ -47,8 +51,8 @@ import { ObservabilityController } from './controllers/observability.controller'
     BaseDeConhecimentoModule,  // provides VectorSearchService, TemplateResolverService, MandatoryInfoResolverService
     RegulatorioModule,         // provides Persona repo for ApplyPersonaTone skill
   ],
-  controllers: [ExecutionController, TicketExecutionController, HumanReviewController, ObservabilityController],
-  providers: [ExecutionService, TicketExecutionService, SkillRegistryService, HumanReviewService, HitlPolicyService, ObservabilityService],
+  controllers: [ExecutionController, TicketExecutionController, HumanReviewController, ObservabilityController, AdminFeedbackController, AdminAuditController],
+  providers: [ExecutionService, TicketExecutionService, SkillRegistryService, HumanReviewService, HitlPolicyService, ObservabilityService, AdminFeedbackService, AdminAuditService],
   exports: [TypeOrmModule, ExecutionService, TicketExecutionService, SkillRegistryService, HumanReviewService, HitlPolicyService],
 })
 export class ExecucaoModule {}

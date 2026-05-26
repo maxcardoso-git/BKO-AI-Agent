@@ -369,6 +369,30 @@ export class ObservabilityService {
     };
   }
 
+  /**
+   * Returns global average time (in minutes) between paused_human and decision_made events.
+   * Used by GET /api/admin/observability/human-review-avg-time.
+   * Joins on executionId to correlate the two events for the same ticket execution.
+   */
+  async getHumanReviewAvgTime(): Promise<{ avgMinutes: number | null; sampleSize: number }> {
+    const rows = await this.dataSource.query(
+      `SELECT AVG(EXTRACT(EPOCH FROM (dm."occurredAt" - ph."occurredAt"))/60) AS avg_min,
+              COUNT(*) AS sample
+       FROM ticket_timing_event ph
+       JOIN ticket_timing_event dm
+         ON dm."executionId" = ph."executionId"
+        AND dm.milestone = 'decision_made'
+       WHERE ph.milestone = 'paused_human'
+         AND dm."occurredAt" > ph."occurredAt"`,
+    );
+    const row = rows[0];
+    return {
+      avgMinutes:
+        row?.avg_min !== null && row?.avg_min !== undefined ? Number(row.avg_min) : null,
+      sampleSize: Number(row?.sample ?? 0),
+    };
+  }
+
   async getTicketLogs(complaintId: string): Promise<
     Array<{
       id: string;

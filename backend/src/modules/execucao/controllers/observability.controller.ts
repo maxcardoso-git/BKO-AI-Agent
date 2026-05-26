@@ -45,6 +45,12 @@ export class ObservabilityController {
     return this.observabilityService.getTokenTotals();
   }
 
+  @Get('admin/observability/human-review-avg-time')
+  @Roles(UserRole.ADMIN)
+  getHumanReviewAvgTime() {
+    return this.observabilityService.getHumanReviewAvgTime();
+  }
+
   // ─── TMT — Tempo Médio de Tratamento ──────────────────────────────────────
   // Accessible to admin and supervisor; supervisor needs operational visibility.
 
