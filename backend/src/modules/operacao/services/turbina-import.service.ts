@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Complaint, ComplaintStatus, ComplaintRiskLevel } from '../entities/complaint.entity';
 import { Tipology } from '../../regulatorio/entities/tipology.entity';
+import { TimingEventService } from './timing-event.service';
 
 export interface TurbinaRow {
   Protocolo?: string | null;
@@ -140,6 +141,7 @@ export class TurbinaImportService {
     private readonly complaintRepo: Repository<Complaint>,
     @InjectRepository(Tipology)
     private readonly tipologyRepo: Repository<Tipology>,
+    private readonly timingEventService: TimingEventService,
   ) {}
 
   /**
@@ -290,6 +292,21 @@ export class TurbinaImportService {
         // chunked save for performance; TypeORM chunk option splits inserts
         const saved = await this.complaintRepo.save(entitiesToInsert, { chunk: 100 });
         result.imported = saved.length;
+
+        // Emit ticket_created timing event (idempotent) so /admin/audit/timings can compute tempo_total / tempo_sla
+        for (const c of saved) {
+          try {
+            await this.timingEventService.emitOnce(
+              'ticket_created',
+              c.id,
+              null,
+              null,
+              c.createdAt ?? new Date(),
+            );
+          } catch (e) {
+            this.logger.warn(`ticket_created emit failed for ${c.protocolNumber}: ${e}`);
+          }
+        }
       } catch (err) {
         this.logger.error(`Bulk save failed: ${err}`);
         result.errors.push({ protocol: null, reason: `bulk save failed: ${err}` });
