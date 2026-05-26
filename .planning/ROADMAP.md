@@ -15,7 +15,7 @@ BKO Agent is built in ten phases following the natural dependency order of the s
 - [x] **Phase 7: Polish & Compliance** - Memory & learning, personas, configuration admin, observability dashboards, security/LGPD hardening
 - [x] **Phase 8: Schema & Pipeline Simplification** - DB migrations for operator note + human_review extensions; pipeline reduced to 14 steps; LoadComplaint and DraftFinalResponse updated to consume operator note
 - [ ] **Phase 9: Operator UI & RBAC** - `/processar` screen with note-taking, search, progress tracking; sidebar routing rules per role
-- [ ] **Phase 10: Validation UI & Training Memory** - `/processar/:protocolo/validar` approve/correct/reject flow; feedback persisted to HumanFeedbackMemory; admin feedback audit page
+- [x] **Phase 10: Validation UI & Training Memory** - `/processar/:protocolo/validar` approve/correct/reject flow; feedback persisted to HumanFeedbackMemory; admin feedback audit page
 
 ## Phase Details
 
@@ -196,9 +196,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Backend: extend HumanReviewService for approved/corrected/rejected with timing event emission + lock release + responsavelFinal set; MemoryFeedbackService persistence with embeddings; GET /api/admin/feedback endpoint (ADMIN); GET /api/admin/audit/timings endpoint with filters; observability service adds human_review_avg_time metric
-- [ ] 10-02-PLAN.md — DraftFinalResponse prompt update: MemoryRetrievalService.findSimilarFeedback (correction + rejection), inject into PromptBuilderService draft context, expose injected examples in execution artifact output for UI display
-- [ ] 10-03-PLAN.md — Frontend: `/processar/:protocolo/validar` page (editable draft, conformance score, context panel, Aprovar/Corrigir/Reprovar with rejection modal); auto-redirect from `/processar` on paused_human; `/admin/feedback` read-only; `/admin/audit/timings` table with filters; observability panel update
+- [x] 10-01-PLAN.md — Backend: extend HumanReviewService for approved/corrected/rejected with timing event emission + lock release + responsavelFinal set; MemoryFeedbackService persistence with embeddings; GET /api/admin/feedback endpoint (ADMIN); GET /api/admin/audit/timings endpoint with filters; observability service adds human_review_avg_time metric
+- [x] 10-02-PLAN.md — DraftFinalResponse prompt update: MemoryRetrievalService.findSimilarFeedback (correction-filtered), inject into PromptBuilderService draft context, expose injected examples in execution artifact output for UI display; **+Task 0:** loadComplaint now queries complaint_user_note and exposes operatorNote/operatorNoteParameters (closes dormant gap from Phase 8-03)
+- [x] 10-03-PLAN.md — Frontend: `/processar/:protocolo/validar` page (editable draft, conformance score, context panel, Aprovar/Corrigir/Reprovar with rejection modal); auto-redirect from `/processar` on paused_human; `?retry=<protocolo>` carry-forward (VALUI-06); `/admin/feedback` read-only; `/admin/audit/timings` table with filters; observability panel update
 
 ## Progress
 
@@ -215,6 +215,6 @@ v2: 8 -> 9 -> 10
 | 5. Skills Pipeline | 3/3 | ✓ Complete | 2026-03-18 |
 | 6. Human Review Pipeline | 4/4 | ✓ Complete | 2026-03-18 |
 | 7. Polish & Compliance | 4/4 | ✓ Complete | 2026-03-18 |
-| 8. Schema & Pipeline Simplification | 0/3 | Not started | — |
-| 9. Operator UI & RBAC | 0/3 | Not started | — |
-| 10. Validation UI & Training Memory | 0/3 | Not started | — |
+| 8. Schema & Pipeline Simplification | 3/3 | ✓ Complete | 2026-05-06 |
+| 9. Operator UI & RBAC | 4/4 | ✓ Complete | 2026-05-06 |
+| 10. Validation UI & Training Memory | 3/3 | ✓ Complete | 2026-05-26 |

@@ -224,21 +224,21 @@
 
 ### Validation UI — Tela de Validação
 
-- [ ] **VALUI-01**: Ao concluir o pipeline (paused_human), redireciona automaticamente para `/processar/:protocolo/validar`
-- [ ] **VALUI-02**: Tela exibe rascunho IA em editor editável, score de conformidade, contexto usado (template, KB chunks, nota do operador)
-- [ ] **VALUI-03**: Botão "Aprovar" usa rascunho atual como resposta final, marca human_review como `approved`, finaliza execução
-- [ ] **VALUI-04**: Botão "Corrigir" salva texto editado + campo "razão da correção" obrigatório, marca human_review como `corrected`, finaliza execução
-- [ ] **VALUI-05**: Botão "Reprovar" abre modal com campo "motivo da rejeição" obrigatório, marca human_review como `rejected`, cancela execução (status `cancelled`)
-- [ ] **VALUI-06**: Após reprovação, operador pode reiniciar processamento com nota atualizada (nova execução)
-- [ ] **VALUI-07**: Tela técnica multi-coluna (`/tickets/[id]/execution/[execId]`) restrita a ADMIN e SUPERVISOR
+- [x] **VALUI-01**: Ao concluir o pipeline (paused_human), redireciona automaticamente para `/processar/:protocolo/validar`
+- [x] **VALUI-02**: Tela exibe rascunho IA em editor editável, score de conformidade, contexto usado (template, KB chunks, nota do operador)
+- [x] **VALUI-03**: Botão "Aprovar" usa rascunho atual como resposta final, marca human_review como `approved`, finaliza execução
+- [x] **VALUI-04**: Botão "Corrigir" salva texto editado + campo "razão da correção" obrigatório, marca human_review como `corrected`, finaliza execução
+- [x] **VALUI-05**: Botão "Reprovar" abre modal com campo "motivo da rejeição" obrigatório, marca human_review como `rejected`, cancela execução (status `cancelled`)
+- [x] **VALUI-06**: Após reprovação, operador pode reiniciar processamento com nota atualizada (nova execução)
+- [x] **VALUI-07**: Tela técnica multi-coluna (`/tickets/[id]/execution/[execId]`) restrita a ADMIN e SUPERVISOR
 
 ### Training Memory Integration
 
-- [ ] **TRAIN-01**: Correção (texto editado + razão) persiste em `human_feedback_memory` com `feedbackType: 'correction'`, incluindo embedding do texto IA original
-- [ ] **TRAIN-02**: Rejeição (motivo) persiste em `human_feedback_memory` com `feedbackType: 'rejection'`, incluindo embedding do texto IA rejeitado
-- [ ] **TRAIN-03**: `MemoryRetrievalService.findSimilarFeedback` recupera correções/rejeições similares por embedding e tipologia
-- [ ] **TRAIN-04**: Skill `DraftFinalResponse` injeta exemplos de correções aprovadas no prompt do LLM
-- [ ] **TRAIN-05**: Admin pode listar feedbacks por tipologia em `/admin/feedback` (read-only audit)
+- [x] **TRAIN-01**: Correção (texto editado + razão) persiste em `human_feedback_memory` com `feedbackType: 'correction'`, incluindo embedding do texto IA original
+- [x] **TRAIN-02**: Rejeição (motivo) persiste em `human_feedback_memory` com `feedbackType: 'rejection'`, incluindo embedding do texto IA rejeitado
+- [x] **TRAIN-03**: `MemoryRetrievalService.findSimilarFeedback` recupera correções/rejeições similares por embedding e tipologia
+- [x] **TRAIN-04**: Skill `DraftFinalResponse` injeta exemplos de correções aprovadas no prompt do LLM
+- [x] **TRAIN-05**: Admin pode listar feedbacks por tipologia em `/admin/feedback` (read-only audit)
 
 ### RBAC & Routing
 
@@ -261,8 +261,8 @@
 
 - [ ] **AUDIT-TIMING-01**: Tabela `ticket_timing_event` (id, complaintId, executionId nullable, milestone VARCHAR, occurredAt, userId nullable) registrando eventos: `ticket_created`, `note_saved`, `execution_started`, `paused_human`, `decision_made`, `approved`, `completed`
 - [ ] **AUDIT-TIMING-02**: Endpoint `GET /api/complaints/:id/timing` retorna métricas calculadas: tempo_total, tempo_sla, tempo_revisao_humana, tempo_nota_a_processamento, tempo_aprovacao_a_conclusao
-- [ ] **AUDIT-TIMING-03**: Página `/admin/audit/timings` com tabela de tickets + tempos (filtros: tipologia, período, perfil de usuário)
-- [ ] **AUDIT-TIMING-04**: Painel de observabilidade ganha métrica `human_review_avg_time` (tempo médio entre `paused_human` e `decision_made`)
+- [x] **AUDIT-TIMING-03**: Página `/admin/audit/timings` com tabela de tickets + tempos (filtros: tipologia, período, perfil de usuário)
+- [x] **AUDIT-TIMING-04**: Painel de observabilidade ganha métrica `human_review_avg_time` (tempo médio entre `paused_human` e `decision_made`)
 - [ ] **AUDIT-TIMING-05**: Cada `ticket_timing_event` registra `userId` quando ação é humana (note_saved, decision_made, approved, completed); `userId` é null para eventos automáticos (execution_started, paused_human)
 
 ### Ticket Locking
@@ -461,18 +461,20 @@
 | RBAC-02 | Phase 9 | Pending |
 | RBAC-03 | Phase 9 | Pending |
 | RBAC-04 | Phase 9 | Pending |
-| VALUI-01 | Phase 10 | Pending |
-| VALUI-02 | Phase 10 | Pending |
-| VALUI-03 | Phase 10 | Pending |
-| VALUI-04 | Phase 10 | Pending |
-| VALUI-05 | Phase 10 | Pending |
-| VALUI-06 | Phase 10 | Pending |
-| VALUI-07 | Phase 10 | Pending |
-| TRAIN-01 | Phase 10 | Pending |
-| TRAIN-02 | Phase 10 | Pending |
-| TRAIN-03 | Phase 10 | Pending |
-| TRAIN-04 | Phase 10 | Pending |
-| TRAIN-05 | Phase 10 | Pending |
+| VALUI-01 | Phase 10 | Complete |
+| VALUI-02 | Phase 10 | Complete |
+| VALUI-03 | Phase 10 | Complete |
+| VALUI-04 | Phase 10 | Complete |
+| VALUI-05 | Phase 10 | Complete |
+| VALUI-06 | Phase 10 | Complete |
+| VALUI-07 | Phase 10 | Complete |
+| TRAIN-01 | Phase 10 | Complete |
+| TRAIN-02 | Phase 10 | Complete |
+| TRAIN-03 | Phase 10 | Complete |
+| TRAIN-04 | Phase 10 | Complete |
+| TRAIN-05 | Phase 10 | Complete |
+| AUDIT-TIMING-03 | Phase 10 | Complete |
+| AUDIT-TIMING-04 | Phase 10 | Complete |
 
 **Coverage:**
 - v1 requirements: 111 total — mapped to phases: 111 — unmapped: 0

@@ -9,16 +9,26 @@ See: .planning/PROJECT.md (updated 2026-04-10)
 
 ## Current Position
 
-Phase: 10 — Validation UI, Training Memory & Audit Reports
-Plan: 03 of ~4 in phase
-Status: In progress — 10-03 complete
-Last activity: 2026-05-26 — Completed 10-03-PLAN.md (frontend validation UI, admin audit pages, observability panel)
+Phase: 10 — Validation UI, Training Memory & Audit Reports — ✓ COMPLETE
+Plan: —
+Status: Milestone v2 COMPLETE — all phases 8/9/10 verified (Phase 10: 8/8 must_haves PASS)
+Last activity: 2026-05-26 — Phase 10 executed (3 waves, 3 plans) + verified + committed
 
-Progress: v1 [██████████] 100% (23/23 plans) | v2 [█████████░] ~96% (14/15 plans est.)
+Progress: v1 [██████████] 100% (23/23 plans) | v2 [██████████] 100% (10/10 plans across 8/9/10)
 
-Post-09 work shipped (not tracked as plans):
+Phase 10 highlight — Task 0 in 10-02 closed a dormant gap from Phase 8-03:
+LoadComplaint now queries complaint_user_note and exposes operatorNote downstream. The prompt-builder NOTA DO OPERADOR injection has been wired since Phase 8-03 but never received data because LoadComplaint did not query the note table.
+
+Phase 10 commits:
+- BKOAgent: b9ac3d8 + dd0b00e + ad2f269 + 38dc9c9 (10-01); 9d42800 + 829960d + 92f853d (10-02); 994ca71 (10-03 docs)
+- BKOConsole: 713619c (10-03 frontend bundle)
+
+Post-09 ad-hoc work shipped (not tracked as plans):
 - d3b8256 feat: pipeline enhancements, invoice/turbina import, smart-note, compliance prompt fixes
 - 0b90c90 wip: 09 hotfixes (route-roles, middleware, app-layout) deployed at 72.61.52.70
+
+Pre-existing uncommitted in BKOConsole (deployed to prod, not committed locally — separate from Phase 10):
+- middleware.ts, navigation.ts, use-require-auth.ts, admin/tokens/page.tsx, processar/page.tsx + NoteForm + ProgressBar, types/complaint, types/steps-designer
 
 ## Performance Metrics
 
