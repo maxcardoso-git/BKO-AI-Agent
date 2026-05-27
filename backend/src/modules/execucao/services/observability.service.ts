@@ -393,6 +393,36 @@ export class ObservabilityService {
     };
   }
 
+  /**
+   * Aggregates operator ratings (1-3 stars) of AI-generated drafts.
+   * Returns global average + count + per-star distribution. Used by the
+   * dashboard's "Qualidade da Resposta IA" section.
+   */
+  async getAiResponseRatingStats(): Promise<{
+    avg: number | null;
+    count: number;
+    distribution: Array<{ stars: number; count: number }>;
+  }> {
+    const rows = await this.dataSource.query(
+      `SELECT "aiResponseRating" AS stars, COUNT(*)::int AS count
+       FROM human_review
+       WHERE "aiResponseRating" IS NOT NULL
+       GROUP BY "aiResponseRating"
+       ORDER BY "aiResponseRating" ASC`,
+    );
+    const distribution: Array<{ stars: number; count: number }> = [1, 2, 3].map((s) => {
+      const row = rows.find((r: { stars: number }) => Number(r.stars) === s);
+      return { stars: s, count: row ? Number(row.count) : 0 };
+    });
+    const totalCount = distribution.reduce((acc, d) => acc + d.count, 0);
+    const totalStars = distribution.reduce((acc, d) => acc + d.stars * d.count, 0);
+    return {
+      avg: totalCount > 0 ? totalStars / totalCount : null,
+      count: totalCount,
+      distribution,
+    };
+  }
+
   async getTicketLogs(complaintId: string): Promise<
     Array<{
       id: string;

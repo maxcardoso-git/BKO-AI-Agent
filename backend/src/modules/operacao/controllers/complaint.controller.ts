@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Post,
@@ -10,7 +11,7 @@ import {
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
-import { ComplaintService } from '../services/complaint.service';
+import { ComplaintService, ComplianceRecheckResult } from '../services/complaint.service';
 import { TicketLockService } from '../services/ticket-lock.service';
 import { ComplaintFilterDto } from '../dto/complaint-filter.dto';
 import { ComplaintListResponse } from '../dto/complaint-list-response.dto';
@@ -75,5 +76,20 @@ export class ComplaintController {
   @Get(':id/timing')
   getTiming(@Param('id', ParseUUIDPipe) id: string): Promise<TimingMetricsDto> {
     return this.complaintService.getTimingMetrics(id);
+  }
+
+  /** POST /api/complaints/:id/compliance-recheck — re-evaluates presence-based
+   *  compliance against the latest operator note AND the latest AI draft.
+   *  Accepts an optional `draftText` in the body so the UI can pass its current
+   *  (possibly unsaved) draft buffer, which is what the operator is actually
+   *  evaluating. Body is optional — when absent, falls back to the saved draft
+   *  artifact. POST is used because draftText can be long. */
+  @Post(':id/compliance-recheck')
+  @HttpCode(200)
+  recheckCompliance(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body?: { draftText?: string },
+  ): Promise<ComplianceRecheckResult> {
+    return this.complaintService.recomputeCompliance(id, body?.draftText);
   }
 }

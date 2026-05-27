@@ -12,6 +12,8 @@ import { AccessToken } from './entities/access-token.entity';
 import { TicketLock } from './entities/ticket-lock.entity';
 import { TicketTimingEvent } from './entities/ticket-timing-event.entity';
 import { Tipology } from '../regulatorio/entities/tipology.entity';
+import { MandatoryInfoRule } from '../regulatorio/entities/mandatory-info-rule.entity';
+import { Artifact } from '../execucao/entities/artifact.entity';
 import { ComplaintService } from './services/complaint.service';
 import { DiscountService } from './services/discount.service';
 import { InvoiceService } from './services/invoice.service';
@@ -46,6 +48,8 @@ import { IaModule } from '../ia/ia.module';
       TicketLock,
       TicketTimingEvent,
       Tipology,
+      MandatoryInfoRule,
+      Artifact,
     ]),
     IaModule,
   ],

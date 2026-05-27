@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsBoolean, IsObject, IsIn, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsObject, IsIn, IsInt, Min, Max, MaxLength } from 'class-validator';
 
 export class SubmitReviewDto {
   @IsString()
@@ -42,4 +42,12 @@ export class SubmitReviewDto {
   @IsString()
   @MaxLength(2000)
   rejectionReason?: string;
+
+  // Operator's quality rating of the AI draft (1-3 stars). Required by the
+  // validation UI; controller-level guard rejects requests where it's missing.
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(3)
+  aiResponseRating?: number;
 }

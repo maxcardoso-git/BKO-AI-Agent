@@ -51,6 +51,12 @@ export class ObservabilityController {
     return this.observabilityService.getHumanReviewAvgTime();
   }
 
+  @Get('admin/observability/ai-response-rating')
+  @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
+  getAiResponseRatingStats() {
+    return this.observabilityService.getAiResponseRatingStats();
+  }
+
   // ─── TMT — Tempo Médio de Tratamento ──────────────────────────────────────
   // Accessible to admin and supervisor; supervisor needs operational visibility.
 

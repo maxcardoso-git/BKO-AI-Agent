@@ -53,6 +53,11 @@ export class HumanReview {
   @Column({ type: 'text', nullable: true })
   observations: string | null;
 
+  /** Operator's 1-3 star rating of the AI draft quality. Required for all
+   *  decisions made via the validation UI; nullable for pre-rating rows. */
+  @Column({ type: 'smallint', nullable: true })
+  aiResponseRating: number | null;
+
   @Column({ type: 'timestamp', nullable: true })
   reviewedAt: Date | null;
 

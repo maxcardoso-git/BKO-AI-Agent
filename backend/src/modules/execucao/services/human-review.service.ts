@@ -161,6 +161,14 @@ export class HumanReviewService {
     if (decision === 'corrected' && !humanFinalText?.trim()) {
       throw new HttpException('humanFinal is required when decision=corrected', 400);
     }
+    if (
+      dto.aiResponseRating === undefined ||
+      dto.aiResponseRating === null ||
+      dto.aiResponseRating < 1 ||
+      dto.aiResponseRating > 3
+    ) {
+      throw new HttpException('aiResponseRating is required (1-3)', 400);
+    }
 
     const statusMap: Record<typeof decision, HumanReviewStatus> = {
       approved: HumanReviewStatus.APPROVED,
@@ -182,6 +190,7 @@ export class HumanReviewService {
         rejectionReason: decision === 'rejected' ? (dto.rejectionReason ?? null) : null,
         checklistItems: checklistItems ?? null,
         observations: dto.observations ?? null,
+        aiResponseRating: dto.aiResponseRating,
         checklistCompleted:
           checklistItems != null && Object.keys(checklistItems).length > 0,
         reviewedAt: new Date(), // ALL 3 decisions are "reviewed" actions
