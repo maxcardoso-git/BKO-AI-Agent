@@ -11,6 +11,7 @@ import { ComplaintUserNote } from './entities/complaint-user-note.entity';
 import { AccessToken } from './entities/access-token.entity';
 import { TicketLock } from './entities/ticket-lock.entity';
 import { TicketTimingEvent } from './entities/ticket-timing-event.entity';
+import { TurbinaImportPreset } from './entities/turbina-import-preset.entity';
 import { Tipology } from '../regulatorio/entities/tipology.entity';
 import { MandatoryInfoRule } from '../regulatorio/entities/mandatory-info-rule.entity';
 import { Artifact } from '../execucao/entities/artifact.entity';
@@ -31,6 +32,10 @@ import { ComplaintUserNoteController } from './controllers/complaint-user-note.c
 import { AdminLocksController } from './controllers/admin-locks.controller';
 import { TurbinaImportService } from './services/turbina-import.service';
 import { TurbinaImportController } from './controllers/turbina-import.controller';
+import { TurbinaPresetService } from './services/turbina-preset.service';
+import { TurbinaPresetController } from './controllers/turbina-preset.controller';
+import { DatabaseResetService } from './services/database-reset.service';
+import { DatabaseResetController } from './controllers/database-reset.controller';
 import { IaModule } from '../ia/ia.module';
 
 @Module({
@@ -50,11 +55,12 @@ import { IaModule } from '../ia/ia.module';
       Tipology,
       MandatoryInfoRule,
       Artifact,
+      TurbinaImportPreset,
     ]),
     IaModule,
   ],
-  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController, TicketLockController, ComplaintUserNoteController, AdminLocksController, TurbinaImportController],
-  providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService, AccessTokenService, TicketLockService, ComplaintUserNoteService, TurbinaImportService],
+  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController, TicketLockController, ComplaintUserNoteController, AdminLocksController, TurbinaImportController, TurbinaPresetController, DatabaseResetController],
+  providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService, AccessTokenService, TicketLockService, ComplaintUserNoteService, TurbinaImportService, TurbinaPresetService, DatabaseResetService],
   exports: [TypeOrmModule, TimingEventService, AccessTokenService],
 })
 export class OperacaoModule {}
