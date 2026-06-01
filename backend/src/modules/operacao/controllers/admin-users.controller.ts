@@ -13,6 +13,7 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User, UserRole } from '../entities/user.entity';
 import { AccessTokenService } from '../services/access-token.service';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 @Controller()
 export class AdminUsersController {
@@ -23,12 +24,14 @@ export class AdminUsersController {
   ) {}
 
   @Get('admin/users')
+  @Roles(UserRole.ADMIN)
   async listUsers(): Promise<Omit<User, 'passwordHash'>[]> {
     const users = await this.userRepo.find({ order: { name: 'ASC' } });
     return users.map(({ passwordHash: _, ...u }) => u);
   }
 
   @Post('admin/users')
+  @Roles(UserRole.ADMIN)
   async createUser(
     @Body() body: { name: string; email: string; password: string; role?: string },
   ): Promise<Omit<User, 'passwordHash'>> {
@@ -48,6 +51,7 @@ export class AdminUsersController {
   }
 
   @Patch('admin/users/:id')
+  @Roles(UserRole.ADMIN)
   async updateUser(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: Partial<{ name: string; email: string; password: string; role: string; isActive: boolean }>,
@@ -65,6 +69,7 @@ export class AdminUsersController {
   }
 
   @Delete('admin/users/:id')
+  @Roles(UserRole.ADMIN)
   async deleteUser(@Param('id', ParseUUIDPipe) id: string): Promise<{ success: boolean }> {
     await this.userRepo.delete(id);
     return { success: true };
