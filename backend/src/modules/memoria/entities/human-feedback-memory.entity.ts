@@ -27,7 +27,16 @@ export class HumanFeedbackMemory {
   correctionCategory: string | null;
 
   @Column({ type: 'varchar', nullable: true })
-  feedbackType: 'correction' | 'rejection' | null;
+  feedbackType: 'correction' | 'rejection' | 'iqi_substitution' | null;
+
+  /** Generic FK-like pointer for typed feedback. For iqi_substitution, holds
+   *  the chosen response_template.id so the learning loop can read it without
+   *  parsing humanText. */
+  @Column({ type: 'uuid', nullable: true })
+  referenceId: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  referenceType: string | null;
 
   @Column({ type: 'text', nullable: true })
   rejectionReason: string | null;

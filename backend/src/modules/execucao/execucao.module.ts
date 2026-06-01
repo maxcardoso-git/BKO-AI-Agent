@@ -14,6 +14,7 @@ import { TokenUsage } from './entities/token-usage.entity';
 import { HumanReview } from './entities/human-review.entity';
 import { AuditLog } from './entities/audit-log.entity';
 import { Tipology } from '../regulatorio/entities/tipology.entity';
+import { ResponseTemplate } from '../regulatorio/entities/response-template.entity';
 import { Complaint } from '../operacao/entities/complaint.entity';
 import { TicketLock } from '../operacao/entities/ticket-lock.entity';
 import { ComplaintUserNote } from '../operacao/entities/complaint-user-note.entity';
@@ -47,6 +48,7 @@ import { AnalyticsController } from './controllers/analytics.controller';
       Complaint,
       TicketLock,
       ComplaintUserNote,
+      ResponseTemplate,
     ]),
     OrquestracaoModule,
     OperacaoModule,

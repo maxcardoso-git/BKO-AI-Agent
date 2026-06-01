@@ -11,6 +11,7 @@ import { Complaint } from '../../operacao/entities/complaint.entity';
 import { ComplaintUserNote } from '../../operacao/entities/complaint-user-note.entity';
 import { Persona } from '../../regulatorio/entities/persona.entity';
 import { Tipology } from '../../regulatorio/entities/tipology.entity';
+import { ResponseTemplate } from '../../regulatorio/entities/response-template.entity';
 import { CaseMemory } from '../../memoria/entities/case-memory.entity';
 import { HumanFeedbackMemory } from '../../memoria/entities/human-feedback-memory.entity';
 import { ComplaintParsingAgent } from '../../ia/services/complaint-parsing.agent';
@@ -77,6 +78,9 @@ export class SkillRegistryService {
 
     @InjectRepository(SkillDefinition)
     private readonly skillDefinitionRepo: Repository<SkillDefinition>,
+
+    @InjectRepository(ResponseTemplate)
+    private readonly templateRepo: Repository<ResponseTemplate>,
 
     @InjectDataSource()
     private readonly dataSource: DataSource,
@@ -756,7 +760,7 @@ Situacao atual: ${situationKey ?? 'nao informada'}`;
       return { templateContent: null, templateName: null, error: 'No tipologyId provided' };
     }
     const complaintText = (input['normalizedText'] as string) ?? (input['complaintText'] as string) ?? '';
-    const template = await this.templateResolver.resolve(tipologyId, situationId);
+    const template = await this.templateResolver.resolve(tipologyId, situationId, complaintId);
 
     const artifact = await this.artifactRepo.save(
       this.artifactRepo.create({
@@ -1303,7 +1307,7 @@ A recomendacao deve ser pratica e curta (1-2 frases).`;
       this.getOrCreateTypology(complaintId, complaint.rawText ?? ''),
     ]);
 
-    const iqi = await this.getOrCreateIqi(complaintId, typology);
+    const iqi = await this.getOrCreateIqi(complaintId, typology, complaint.rawText ?? '');
 
     return { sentiment, typology, iqi };
   }
@@ -1396,6 +1400,25 @@ A recomendacao deve ser pratica e curta (1-2 frases).`;
     }
 
     const content = { ...classified, tipologyId, tipologyLabel };
+
+    // Persist the classification on the complaint itself so downstream
+    // queries (analytics, mandatory_info_rule resolution, /validar header)
+    // don't need to read the artifact. Only writes when the column is null —
+    // we don't overwrite a tipologyId that was set at ingestion time (the
+    // operator/turbina classification takes precedence over IA in that case).
+    if (tipologyId) {
+      try {
+        await this.complaintRepo
+          .createQueryBuilder()
+          .update()
+          .set({ tipologyId })
+          .where('id = :id AND "tipologyId" IS NULL', { id: complaintId })
+          .execute();
+      } catch (err) {
+        this.logger.warn(`Could not persist IA-classified tipologyId on complaint: ${err}`);
+      }
+    }
+
     await this.artifactRepo.save(
       this.artifactRepo.create({
         artifactType: 'typology_classification',
@@ -1410,6 +1433,7 @@ A recomendacao deve ser pratica e curta (1-2 frases).`;
   private async getOrCreateIqi(
     complaintId: string,
     typology: Record<string, unknown> | null,
+    complaintText: string,
   ): Promise<Record<string, unknown> | null> {
     const tipologyId = typology?.tipologyId as string | null | undefined;
     if (!tipologyId) return null;
@@ -1420,21 +1444,88 @@ A recomendacao deve ser pratica e curta (1-2 frases).`;
     });
     if (existing) return existing.content as Record<string, unknown>;
 
-    const template = await this.templateResolver.resolve(tipologyId, null);
-    const content = {
-      templateId: template?.id ?? null,
-      templateName: template?.name ?? null,
-      templateContent: template?.templateContent ?? null,
-      matchType: template?.matchType ?? null,
-    };
+    // 1. Try to learn from past operator IQI substitutions for this tipology.
+    //    If a strong match is found, suggest that template instead of the
+    //    LLM-based tipology resolution.
+    let learned: { templateId: string; similarity: number; sourceComplaintId: string } | null = null;
+    if (complaintText.trim().length > 0) {
+      try {
+        learned = await this.findLearnedIqi(tipologyId, complaintText);
+      } catch (err) {
+        this.logger.warn(`Could not search learned IQI substitutions: ${err}`);
+      }
+    }
+
+    let content: Record<string, unknown>;
+    if (learned) {
+      const learnedTemplate = await this.templateRepo.findOne({ where: { id: learned.templateId } });
+      if (learnedTemplate) {
+        content = {
+          templateId: learnedTemplate.id,
+          templateName: learnedTemplate.name,
+          templateContent: learnedTemplate.templateContent,
+          matchType: 'memory_learned',
+          learnedFromComplaintId: learned.sourceComplaintId,
+          learnedSimilarity: Number(learned.similarity.toFixed(3)),
+        };
+      } else {
+        // The learned template was deleted/deactivated — fall through to normal resolution
+        learned = null;
+      }
+    }
+
+    if (!learned) {
+      const template = await this.templateResolver.resolve(tipologyId, null, complaintId);
+      content = {
+        templateId: template?.id ?? null,
+        templateName: template?.name ?? null,
+        templateContent: template?.templateContent ?? null,
+        matchType: template?.matchType ?? null,
+      };
+    }
+
     await this.artifactRepo.save(
       this.artifactRepo.create({
         artifactType: 'iqi_template',
-        content,
+        content: content!,
         version: 1,
         complaintId,
       }),
     );
-    return content;
+    return content!;
+  }
+
+  /** Searches human_feedback_memory for the most similar past operator IQI
+   *  substitution within the same tipology. Returns null when nothing crosses
+   *  the similarity threshold (0.85 cosine sim). */
+  private async findLearnedIqi(
+    tipologyId: string,
+    complaintText: string,
+  ): Promise<{ templateId: string; similarity: number; sourceComplaintId: string } | null> {
+    const vec = await this.vectorSearch.generateEmbedding(complaintText.slice(0, 8000));
+    const sqlVec = `[${vec.join(',')}]`;
+    const rows = await this.artifactRepo.query(
+      `SELECT
+         "referenceId"     AS template_id,
+         "complaintId"     AS source_complaint_id,
+         1 - (embedding <=> $1::vector) AS similarity
+       FROM human_feedback_memory
+       WHERE "feedbackType" = 'iqi_substitution'
+         AND "referenceType" = 'response_template'
+         AND "referenceId" IS NOT NULL
+         AND "tipologyId" = $2
+       ORDER BY embedding <=> $1::vector ASC
+       LIMIT 1`,
+      [sqlVec, tipologyId],
+    );
+    const row = rows[0];
+    if (!row) return null;
+    const similarity = Number(row.similarity ?? 0);
+    if (similarity < 0.85) return null;
+    return {
+      templateId: String(row.template_id),
+      similarity,
+      sourceComplaintId: String(row.source_complaint_id),
+    };
   }
 }

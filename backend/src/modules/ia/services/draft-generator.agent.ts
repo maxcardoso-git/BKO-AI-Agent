@@ -40,13 +40,18 @@ export class DraftGeneratorAgent {
     const slaDeadline = input['slaDeadline'] as string | undefined;
     const slaBusinessDays = input['slaBusinessDays'] as number | undefined;
     const previousStepOutputs = input['stepOutputs'] as Record<string, Record<string, unknown>> | undefined;
+    const complaintId = (input['complaintId'] as string | undefined)
+      ?? (complaintNested?.['id'] as string | undefined)
+      ?? null;
 
     // 1. Retrieve KB context
     const kbChunks = await this.vectorSearch.search(complaintText, 5);
 
-    // 2. Resolve template
+    // 2. Resolve template — passes complaintId so the operator-forced template
+    //    override (set via POST /api/complaints/:id/override-template) takes
+    //    precedence over the IA's tipology-based match.
     const template = tipologyId
-      ? await this.templateResolver.resolve(tipologyId, situationId)
+      ? await this.templateResolver.resolve(tipologyId, situationId, complaintId)
       : null;
 
     // 3. Resolve mandatory fields

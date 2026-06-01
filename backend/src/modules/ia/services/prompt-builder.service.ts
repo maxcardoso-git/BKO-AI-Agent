@@ -152,9 +152,24 @@ export class PromptBuilderService {
         ctx.operatorNote.trim(),
       );
       if (ctx.operatorNoteParameters && Object.keys(ctx.operatorNoteParameters).length > 0) {
-        system.push('', '## Parametros estruturados da nota:');
+        // Unwrap legacy { dynamicFields: {...} } wrapping — older notes saved
+        // the template fields nested. Flatten so each key:value gets its own
+        // bullet (the model handles flat lists much better than nested JSON).
+        const flat: Record<string, unknown> = {};
         for (const [k, v] of Object.entries(ctx.operatorNoteParameters)) {
-          system.push(`- ${k}: ${JSON.stringify(v)}`);
+          if (k === 'dynamicFields' && v && typeof v === 'object' && !Array.isArray(v)) {
+            for (const [innerK, innerV] of Object.entries(v as Record<string, unknown>)) {
+              if (!(innerK in flat)) flat[innerK] = innerV;
+            }
+          } else if (!(k in flat)) {
+            flat[k] = v;
+          }
+        }
+
+        system.push('', '## Parametros estruturados da nota (USE para preencher placeholders do template):');
+        for (const [k, v] of Object.entries(flat)) {
+          const display = typeof v === 'string' ? v : JSON.stringify(v);
+          system.push(`- ${k}: ${display}`);
         }
       }
     }

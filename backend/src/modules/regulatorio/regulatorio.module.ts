@@ -10,6 +10,7 @@ import { ResponseTemplate } from './entities/response-template.entity';
 import { MandatoryInfoRule } from './entities/mandatory-info-rule.entity';
 import { TipologyController } from './controllers/tipology.controller';
 import { AdminConfigController } from './controllers/admin-config.controller';
+import { MandatoryInfoRuleController } from './controllers/mandatory-info-rule.controller';
 import { AdminConfigService } from './services/admin-config.service';
 import { SkillDefinition } from '../orquestracao/entities/skill-definition.entity';
 import { Capability } from '../orquestracao/entities/capability.entity';
@@ -35,7 +36,7 @@ import { ServiceType } from './entities/service-type.entity';
       ServiceType,
     ]),
   ],
-  controllers: [TipologyController, AdminConfigController],
+  controllers: [TipologyController, AdminConfigController, MandatoryInfoRuleController],
   providers: [AdminConfigService],
   exports: [TypeOrmModule],
 })

@@ -36,7 +36,11 @@ import { TurbinaPresetService } from './services/turbina-preset.service';
 import { TurbinaPresetController } from './controllers/turbina-preset.controller';
 import { DatabaseResetService } from './services/database-reset.service';
 import { DatabaseResetController } from './controllers/database-reset.controller';
+import { TemplateOverrideService } from './services/template-override.service';
+import { TemplateOverrideController } from './controllers/template-override.controller';
+import { ResponseTemplate } from '../regulatorio/entities/response-template.entity';
 import { IaModule } from '../ia/ia.module';
+import { BaseDeConhecimentoModule } from '../base-de-conhecimento/base-de-conhecimento.module';
 
 @Module({
   imports: [
@@ -56,11 +60,13 @@ import { IaModule } from '../ia/ia.module';
       MandatoryInfoRule,
       Artifact,
       TurbinaImportPreset,
+      ResponseTemplate,
     ]),
     IaModule,
+    BaseDeConhecimentoModule, // for VectorSearchService (IQI override embedding)
   ],
-  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController, TicketLockController, ComplaintUserNoteController, AdminLocksController, TurbinaImportController, TurbinaPresetController, DatabaseResetController],
-  providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService, AccessTokenService, TicketLockService, ComplaintUserNoteService, TurbinaImportService, TurbinaPresetService, DatabaseResetService],
+  controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController, TicketLockController, ComplaintUserNoteController, AdminLocksController, TurbinaImportController, TurbinaPresetController, DatabaseResetController, TemplateOverrideController],
+  providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService, AccessTokenService, TicketLockService, ComplaintUserNoteService, TurbinaImportService, TurbinaPresetService, DatabaseResetService, TemplateOverrideService],
   exports: [TypeOrmModule, TimingEventService, AccessTokenService],
 })
 export class OperacaoModule {}

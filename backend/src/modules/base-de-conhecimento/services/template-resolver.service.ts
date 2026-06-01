@@ -2,13 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ResponseTemplate } from '../../regulatorio/entities/response-template.entity';
+import { Complaint } from '../../operacao/entities/complaint.entity';
 
 export interface ResolvedTemplate {
   id: string;
   name: string;
   templateContent: string;
   version: number;
-  matchType: 'tipology_situation' | 'tipology_only' | 'default';
+  matchType: 'tipology_situation' | 'tipology_only' | 'default' | 'operator_override';
 }
 
 @Injectable()
@@ -16,17 +17,45 @@ export class TemplateResolverService {
   constructor(
     @InjectRepository(ResponseTemplate)
     private readonly templateRepo: Repository<ResponseTemplate>,
+    @InjectRepository(Complaint)
+    private readonly complaintRepo: Repository<Complaint>,
   ) {}
 
   /**
    * Resolves the best-matching IQI template for a given tipology and optional situation.
-   * Priority: 1) tipologyId + situationId match, 2) tipologyId-only match, 3) null tipology (default).
+   * Priority: 0) operator override on the complaint (when complaintId provided),
+   *          1) tipologyId + situationId match,
+   *          2) tipologyId-only match,
+   *          3) null tipology (default).
    * Returns null if no template found.
    */
   async resolve(
     tipologyId: string,
     situationId?: string | null,
+    complaintId?: string | null,
   ): Promise<ResolvedTemplate | null> {
+    // 0. Operator override wins regardless of tipology/situation
+    if (complaintId) {
+      const complaint = await this.complaintRepo.findOne({
+        where: { id: complaintId },
+        select: ['id', 'templateOverrideId'],
+      });
+      if (complaint?.templateOverrideId) {
+        const forced = await this.templateRepo.findOne({
+          where: { id: complaint.templateOverrideId },
+        });
+        if (forced) {
+          return {
+            id: forced.id,
+            name: forced.name,
+            templateContent: forced.templateContent,
+            version: forced.version,
+            matchType: 'operator_override',
+          };
+        }
+      }
+    }
+
     // 1. Try exact match: tipology + situation
     if (situationId) {
       const exact = await this.templateRepo.findOne({

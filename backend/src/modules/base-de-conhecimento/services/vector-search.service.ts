@@ -28,6 +28,21 @@ export class VectorSearchService {
   ) {}
 
   /**
+   * Generates a 1536-dim embedding for an arbitrary text using OpenAI's
+   * text-embedding-3-small. Centralized so other services don't need to set up
+   * the provider themselves. Used by the IQI learning loop and any future
+   * memory feature that needs to embed text on the fly.
+   */
+  async generateEmbedding(text: string): Promise<number[]> {
+    const openaiProvider = createOpenAI({
+      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
+    });
+    const model = openaiProvider.textEmbeddingModel('text-embedding-3-small');
+    const { embedding } = await embed({ model, value: text });
+    return embedding;
+  }
+
+  /**
    * Searches kb_chunk for the most similar chunks to the query text.
    * Uses pgvector cosine distance (<=> operator, ORDER BY ASC = most similar first).
    * Optionally filters by document source type (e.g., 'manual_anatel', 'guia_iqi').

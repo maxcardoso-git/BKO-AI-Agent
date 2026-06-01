@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { MemoriaModule } from '../memoria/memoria.module';
 import { RegulatorioModule } from '../regulatorio/regulatorio.module';
 import { LlmModelConfig } from './entities/llm-model-config.entity';
+import { Complaint } from '../operacao/entities/complaint.entity';
 import { DocumentIngestionService } from './services/document-ingestion.service';
 import { VectorSearchService } from './services/vector-search.service';
 import { TemplateResolverService } from './services/template-resolver.service';
@@ -11,7 +12,7 @@ import { KbManagerController } from './controllers/kb-manager.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([LlmModelConfig]),
+    TypeOrmModule.forFeature([LlmModelConfig, Complaint]),
     MemoriaModule,       // provides KbDocument, KbDocumentVersion, KbChunk repos
     RegulatorioModule,   // provides ResponseTemplate, MandatoryInfoRule repos
   ],

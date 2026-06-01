@@ -15,15 +15,19 @@ import { SmartNoteService } from './services/smart-note.service';
 import { SmartNoteController } from './controllers/smart-note.controller';
 import { Complaint } from '../operacao/entities/complaint.entity';
 import { ResponseTemplate } from '../regulatorio/entities/response-template.entity';
+import { Tipology } from '../regulatorio/entities/tipology.entity';
+import { Situation } from '../regulatorio/entities/situation.entity';
+import { Persona } from '../regulatorio/entities/persona.entity';
 import { TemplateFieldsExtractorService } from './services/template-fields-extractor.service';
+import { TemplateFieldsAdminController } from './controllers/template-fields-admin.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([LlmCall, TokenUsage, Complaint, ResponseTemplate]),
+    TypeOrmModule.forFeature([LlmCall, TokenUsage, Complaint, ResponseTemplate, Tipology, Situation, Persona]),
     forwardRef(() => BaseDeConhecimentoModule), // forwardRef: IaModule -> BDCM -> MemoriaModule -> forwardRef(IaModule)
     RegulatorioModule,        // provides Persona repo (for future persona-based prompt building)
   ],
-  controllers: [SmartNoteController],
+  controllers: [SmartNoteController, TemplateFieldsAdminController],
   providers: [
     ModelSelectorService,
     PromptBuilderService,

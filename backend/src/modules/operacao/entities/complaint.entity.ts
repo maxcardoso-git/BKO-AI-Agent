@@ -378,6 +378,12 @@ export class Complaint {
   @Column({ type: 'uuid', nullable: true })
   responsavelFinal: string | null;
 
+  /** Operator-forced IQI template id. When non-null, TemplateResolverService
+   *  returns this template regardless of tipology/situation matching. Set via
+   *  POST /api/complaints/:id/override-template. */
+  @Column({ type: 'uuid', nullable: true })
+  templateOverrideId: string | null;
+
   @ManyToOne(() => Tipology, { nullable: true, eager: false })
   @JoinColumn({ name: 'tipologyId' })
   tipology: Tipology | null;
