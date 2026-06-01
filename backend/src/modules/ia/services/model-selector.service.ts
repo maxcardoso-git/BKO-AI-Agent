@@ -23,12 +23,14 @@ export class ModelSelectorService {
   ) {}
 
   /**
-   * Loads the active LlmModelConfig for the given functionalityType and constructs a LanguageModel.
-   * Throws if no active config exists.
+   * Loads the active LlmModelConfig (with resource joined) for the given
+   * functionalityType and constructs a LanguageModel. Throws if no active
+   * config exists.
    */
   async getModel(functionalityType: string): Promise<ModelWithConfig> {
     const config = await this.configRepo.findOne({
       where: { functionalityType, isActive: true },
+      relations: ['resource'],
     });
 
     if (!config) {
@@ -42,12 +44,13 @@ export class ModelSelectorService {
   }
 
   /**
-   * Gets the model config without building the model instance.
+   * Gets the model config (with resource joined) without building the model.
    * Useful when you need config metadata (temperature, maxTokens) separately.
    */
   async getConfig(functionalityType: string): Promise<LlmModelConfig> {
     const config = await this.configRepo.findOne({
       where: { functionalityType, isActive: true },
+      relations: ['resource'],
     });
 
     if (!config) {
@@ -82,9 +85,10 @@ export class ModelSelectorService {
         throw primaryError;
       }
 
-      // Load fallback config
+      // Load fallback config (with resource joined)
       const fallbackConfig = await this.configRepo.findOne({
         where: { id: primaryConfig.fallbackConfigId, isActive: true },
+        relations: ['resource'],
       });
 
       if (!fallbackConfig) {
@@ -105,12 +109,35 @@ export class ModelSelectorService {
   }
 
   /**
-   * Builds a LanguageModel instance from a config row.
+   * Resolves the API key for a given config in this priority order:
+   *   1. resource.apiKeyValue (DB-stored, preferred)
+   *   2. resource.bearerToken (DB-stored, alt for BEARER_TOKEN auth)
+   *   3. apiKeyEnvVar resolved through ConfigService (legacy .env fallback)
+   *
+   * Returns undefined when nothing is configured — lets the SDK try its own
+   * default env var (e.g., OPENAI_API_KEY). Logs the source so it's clear
+   * during ops which key the system is actually using.
+   */
+  resolveApiKey(config: LlmModelConfig): string | undefined {
+    if (config.resource?.apiKeyValue && config.resource.apiKeyValue.trim().length > 0) {
+      return config.resource.apiKeyValue.trim();
+    }
+    if (config.resource?.bearerToken && config.resource.bearerToken.trim().length > 0) {
+      return config.resource.bearerToken.trim();
+    }
+    if (config.apiKeyEnvVar) {
+      const v = this.configService.get<string>(config.apiKeyEnvVar);
+      if (v && v.trim().length > 0) return v.trim();
+    }
+    return undefined;
+  }
+
+  /**
+   * Builds a LanguageModel instance from a config row, resolving the API key
+   * via resolveApiKey() (DB-first, env fallback).
    */
   buildLanguageModel(config: LlmModelConfig): LanguageModel {
-    const apiKey = config.apiKeyEnvVar
-      ? this.configService.get<string>(config.apiKeyEnvVar)
-      : undefined;
+    const apiKey = this.resolveApiKey(config);
 
     if (config.provider === 'openai') {
       const openai = createOpenAI({ apiKey });
@@ -126,16 +153,27 @@ export class ModelSelectorService {
   }
 
   /**
-   * Returns the embedding model (always OpenAI text-embedding-3-small for now).
-   * Uses the 'embeddings' functionalityType config for API key resolution.
+   * Returns the embedding model and the API key resolved for it. Uses the
+   * 'embeddings' functionalityType config. Centralized here so VectorSearch
+   * and DocumentIngestion don't have to read process.env directly.
    */
   async getEmbeddingModel(): Promise<EmbeddingModel> {
     const config = await this.getConfig('embeddings');
-    const apiKey = config.apiKeyEnvVar
-      ? this.configService.get<string>(config.apiKeyEnvVar)
-      : undefined;
-
+    const apiKey = this.resolveApiKey(config);
     const openai = createOpenAI({ apiKey });
     return openai.textEmbeddingModel(config.modelId);
+  }
+
+  /**
+   * Public helper for callers that need the raw API key + provider config
+   * (e.g., VectorSearch generating embeddings directly via the AI SDK).
+   */
+  async getEmbeddingProvider(): Promise<{ apiKey: string | undefined; modelId: string; provider: string }> {
+    const config = await this.getConfig('embeddings');
+    return {
+      apiKey: this.resolveApiKey(config),
+      modelId: config.modelId,
+      provider: config.provider,
+    };
   }
 }

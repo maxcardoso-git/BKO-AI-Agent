@@ -28,16 +28,47 @@ export class VectorSearchService {
   ) {}
 
   /**
-   * Generates a 1536-dim embedding for an arbitrary text using OpenAI's
-   * text-embedding-3-small. Centralized so other services don't need to set up
-   * the provider themselves. Used by the IQI learning loop and any future
-   * memory feature that needs to embed text on the fly.
+   * Resolves the OpenAI API key + model for the 'embeddings' functionality,
+   * preferring the value stored in resource.apiKeyValue / bearerToken (DB) and
+   * falling back to the apiKeyEnvVar through ConfigService. Returns null when
+   * no key is configured anywhere.
+   *
+   * Queries the DB directly to avoid a circular dep with IaModule.
+   */
+  private async resolveEmbeddingConfig(): Promise<{ apiKey: string | undefined; modelId: string }> {
+    const rows = await this.dataSource.query(
+      `SELECT lmc."modelId" AS model_id,
+              lmc."apiKeyEnvVar" AS env_var,
+              r."apiKeyValue" AS api_key_value,
+              r."bearerToken" AS bearer_token
+         FROM llm_model_config lmc
+         LEFT JOIN resource r ON r.id = lmc."resourceId"
+        WHERE lmc."functionalityType" = 'embeddings'
+          AND lmc."isActive" = true
+        LIMIT 1`,
+    );
+    const row = rows?.[0];
+    if (!row) {
+      // Fall back to legacy default if no config row exists
+      const fallbackKey = this.configService.get<string>('OPENAI_API_KEY');
+      return { apiKey: fallbackKey, modelId: 'text-embedding-3-small' };
+    }
+    const apiKey =
+      (row.api_key_value && String(row.api_key_value).trim()) ||
+      (row.bearer_token && String(row.bearer_token).trim()) ||
+      (row.env_var ? this.configService.get<string>(String(row.env_var)) : undefined);
+    return { apiKey, modelId: String(row.model_id) };
+  }
+
+  /**
+   * Generates an embedding for an arbitrary text using the model configured
+   * for 'embeddings' (default text-embedding-3-small). API key is resolved
+   * via resolveEmbeddingConfig() — DB first, env fallback.
    */
   async generateEmbedding(text: string): Promise<number[]> {
-    const openaiProvider = createOpenAI({
-      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
-    });
-    const model = openaiProvider.textEmbeddingModel('text-embedding-3-small');
+    const { apiKey, modelId } = await this.resolveEmbeddingConfig();
+    const openaiProvider = createOpenAI({ apiKey });
+    const model = openaiProvider.textEmbeddingModel(modelId);
     const { embedding } = await embed({ model, value: text });
     return embedding;
   }
@@ -52,11 +83,11 @@ export class VectorSearchService {
     topK = 5,
     sourceType?: string,
   ): Promise<VectorSearchResult[]> {
-    // 1. Generate embedding for query text
-    const openaiProvider = createOpenAI({
-      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
-    });
-    const embeddingModel = openaiProvider.textEmbeddingModel('text-embedding-3-small');
+    // 1. Generate embedding for query text — resolved via DB (resource.apiKeyValue
+    //    → bearerToken → env fallback)
+    const { apiKey, modelId } = await this.resolveEmbeddingConfig();
+    const openaiProvider = createOpenAI({ apiKey });
+    const embeddingModel = openaiProvider.textEmbeddingModel(modelId);
 
     const { embedding } = await embed({
       model: embeddingModel,

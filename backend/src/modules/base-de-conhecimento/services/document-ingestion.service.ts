@@ -120,11 +120,29 @@ export class DocumentIngestionService {
       return { documentId: document.id, versionId: version.id, chunkCount: 0 };
     }
 
-    // 7. Generate embeddings in batches
-    const openaiProvider = createOpenAI({
-      apiKey: this.configService.get<string>('OPENAI_API_KEY'),
-    });
-    const embeddingModel = openaiProvider.textEmbeddingModel('text-embedding-3-small');
+    // 7. Generate embeddings in batches.
+    //    API key + model id resolved via VectorSearchService.resolveEmbeddingConfig
+    //    (DB-first: resource.apiKeyValue → bearerToken → apiKeyEnvVar from env).
+    //    Inlined here to avoid a circular dep with vector-search.service.
+    const embRows = await this.dataSource.query(
+      `SELECT lmc."modelId" AS model_id,
+              lmc."apiKeyEnvVar" AS env_var,
+              r."apiKeyValue" AS api_key_value,
+              r."bearerToken" AS bearer_token
+         FROM llm_model_config lmc
+         LEFT JOIN resource r ON r.id = lmc."resourceId"
+        WHERE lmc."functionalityType" = 'embeddings' AND lmc."isActive" = true
+        LIMIT 1`,
+    );
+    const embRow = embRows?.[0];
+    const apiKey =
+      (embRow?.api_key_value && String(embRow.api_key_value).trim()) ||
+      (embRow?.bearer_token && String(embRow.bearer_token).trim()) ||
+      (embRow?.env_var ? this.configService.get<string>(String(embRow.env_var)) : undefined) ||
+      this.configService.get<string>('OPENAI_API_KEY');
+    const modelId = embRow?.model_id ? String(embRow.model_id) : 'text-embedding-3-small';
+    const openaiProvider = createOpenAI({ apiKey });
+    const embeddingModel = openaiProvider.textEmbeddingModel(modelId);
 
     const chunkTexts = docs.map((d) => d.pageContent);
 

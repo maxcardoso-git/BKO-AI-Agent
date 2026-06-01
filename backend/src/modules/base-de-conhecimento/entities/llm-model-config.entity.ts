@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
+import { Resource } from '../../orquestracao/entities/resource.entity';
 
 @Entity('llm_model_config')
 export class LlmModelConfig {
@@ -42,9 +45,15 @@ export class LlmModelConfig {
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 
-  // FK to resource (API key / credentials)
+  // FK to resource (API key / credentials). When set, ModelSelectorService
+  // resolves the API key from resource.apiKeyValue / resource.bearerToken,
+  // falling back to apiKeyEnvVar only when the resource is not populated.
   @Column({ type: 'uuid', nullable: true })
   resourceId: string | null;
+
+  @ManyToOne(() => Resource, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'resourceId' })
+  resource: Resource | null;
 
   // Self-referencing FK for fallback chain
   @Column({ type: 'uuid', nullable: true })
