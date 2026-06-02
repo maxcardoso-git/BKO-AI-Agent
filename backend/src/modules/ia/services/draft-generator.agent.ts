@@ -1,10 +1,20 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { generateText } from 'ai';
 import { ModelSelectorService } from './model-selector.service';
 import { PromptBuilderService, PromptContext } from './prompt-builder.service';
 import { VectorSearchService } from '../../base-de-conhecimento/services/vector-search.service';
 import { TemplateResolverService } from '../../base-de-conhecimento/services/template-resolver.service';
 import { MandatoryInfoResolverService } from '../../base-de-conhecimento/services/mandatory-info-resolver.service';
+import { Persona } from '../../regulatorio/entities/persona.entity';
+
+const FORMALITY_LABEL: Record<number, string> = {
+  1: 'muito informal', 2: 'informal', 3: 'neutro', 4: 'formal', 5: 'muito formal',
+};
+const LEVEL_LABEL: Record<number, string> = {
+  1: 'baixíssima', 2: 'baixa', 3: 'média', 4: 'alta', 5: 'altíssima',
+};
 
 @Injectable()
 export class DraftGeneratorAgent {
@@ -16,7 +26,41 @@ export class DraftGeneratorAgent {
     private readonly vectorSearch: VectorSearchService,
     private readonly templateResolver: TemplateResolverService,
     private readonly mandatoryInfoResolver: MandatoryInfoResolverService,
+    @InjectRepository(Persona)
+    private readonly personaRepo: Repository<Persona>,
   ) {}
+
+  /** Resolves the active persona for the given tipology, falling back to the
+   *  global (tipologyId IS NULL) persona when no tipology-specific one exists. */
+  private async resolvePersona(tipologyId?: string | null): Promise<Persona | null> {
+    if (tipologyId) {
+      const specific = await this.personaRepo.findOne({
+        where: { tipologyId, isActive: true },
+      });
+      if (specific) return specific;
+    }
+    return this.personaRepo.findOne({
+      where: { tipologyId: IsNull(), isActive: true },
+    });
+  }
+
+  /** Builds the persona instruction block fed into PromptBuilder. Mirrors
+   *  smart-note's buildPersonaSuffix so both flows steer the LLM identically. */
+  private buildPersonaInstructionBlock(persona: Persona): string {
+    const lines: string[] = [
+      `--- Diretrizes da persona "${persona.name}" ---`,
+    ];
+    if (persona.instructions && persona.instructions.trim().length > 0) {
+      lines.push(persona.instructions.trim());
+    }
+    if (persona.requiredExpressions && persona.requiredExpressions.length > 0) {
+      lines.push(`Inclua naturalmente estas expressões: ${persona.requiredExpressions.join(', ')}.`);
+    }
+    if (persona.forbiddenExpressions && persona.forbiddenExpressions.length > 0) {
+      lines.push(`Não use, em hipótese nenhuma, estas palavras/expressões: ${persona.forbiddenExpressions.join(', ')}.`);
+    }
+    return lines.join('\n');
+  }
 
   /**
    * Generates a draft response for a complaint.
@@ -64,6 +108,15 @@ export class DraftGeneratorAgent {
     const humanCorrections = input['humanCorrections'] as Array<{ aiText: string; humanText: string; diffDescription: string; similarity: number }> | undefined;
     const stylePatterns = input['stylePatterns'] as Array<{ expression: string; type: 'approved' | 'forbidden' }> | undefined;
 
+    // Persona steering — tipology-specific persona wins, falls back to global.
+    // Feeds the LLM the admin-configured tone + instruction brief so the draft
+    // already complies with what `/api/ai/persona-check` will validate later.
+    const persona = await this.resolvePersona(tipologyId);
+    const personaTone = persona
+      ? `formalidade=${FORMALITY_LABEL[persona.formalityLevel] ?? persona.formalityLevel}, empatia=${LEVEL_LABEL[persona.empathyLevel] ?? persona.empathyLevel}, assertividade=${LEVEL_LABEL[persona.assertivenessLevel] ?? persona.assertivenessLevel}`
+      : undefined;
+    const personaInstructions = persona ? this.buildPersonaInstructionBlock(persona) : undefined;
+
     const ctx: PromptContext = {
       complaintText,
       tipologyKey,
@@ -78,6 +131,8 @@ export class DraftGeneratorAgent {
       kbChunks,
       template,
       mandatoryFields,
+      personaTone,
+      personaInstructions,
       previousStepOutputs,
       similarCases,
       humanCorrections,

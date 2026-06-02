@@ -35,6 +35,12 @@ export class Persona {
   @Column({ type: 'text', array: true, nullable: true })
   forbiddenExpressions: string[] | null;
 
+  /** Free-text generation brief appended to the LLM system prompt for both
+   *  draft generation and smart-note rewrites. Lets admins steer the IA per
+   *  tipology (char caps, structure rules, where to inject inside the IQI). */
+  @Column({ type: 'text', nullable: true })
+  instructions: string | null;
+
   @Column({ type: 'boolean', default: true })
   isActive: boolean;
 

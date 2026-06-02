@@ -188,6 +188,9 @@ export class SmartNoteService {
       `--- Diretrizes da persona "${persona.name}" ---`,
       `Tom esperado: formalidade=${formalityLabel(persona.formalityLevel)}, empatia=${levelLabel(persona.empathyLevel)}, assertividade=${levelLabel(persona.assertivenessLevel)}.`,
     ];
+    if (persona.instructions && persona.instructions.trim().length > 0) {
+      lines.push('', persona.instructions.trim());
+    }
     if (persona.requiredExpressions && persona.requiredExpressions.length > 0) {
       lines.push(
         `Inclua naturalmente estas expressões no texto: ${persona.requiredExpressions.join(', ')}.`,
