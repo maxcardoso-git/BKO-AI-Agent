@@ -67,6 +67,6 @@ import { BaseDeConhecimentoModule } from '../base-de-conhecimento/base-de-conhec
   ],
   controllers: [ComplaintController, DiscountController, InvoiceController, AdminUsersController, AccessTokenController, TicketLockController, ComplaintUserNoteController, AdminLocksController, TurbinaImportController, TurbinaPresetController, DatabaseResetController, TemplateOverrideController],
   providers: [ComplaintService, DiscountService, InvoiceService, TimingEventService, AccessTokenService, TicketLockService, ComplaintUserNoteService, TurbinaImportService, TurbinaPresetService, DatabaseResetService, TemplateOverrideService],
-  exports: [TypeOrmModule, TimingEventService, AccessTokenService],
+  exports: [TypeOrmModule, TimingEventService, AccessTokenService, ComplaintService],
 })
 export class OperacaoModule {}

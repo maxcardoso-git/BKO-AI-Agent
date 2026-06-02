@@ -14,6 +14,7 @@ import { SubmitReviewDto } from '../dto/submit-review.dto';
 import { MemoryFeedbackService } from '../../memoria/services/memory-feedback.service';
 import { TicketExecutionService } from './ticket-execution.service';
 import { TimingEventService } from '../../operacao/services/timing-event.service';
+import { ComplaintService } from '../../operacao/services/complaint.service';
 
 // ---------------------------------------------------------------------------
 // HitlPolicyService — risk-aware HITL gate
@@ -67,6 +68,8 @@ export class HumanReviewService {
 
     @InjectRepository(TicketLock)
     private readonly lockRepo: Repository<TicketLock>,
+
+    private readonly complaintService: ComplaintService,
   ) {}
 
   /**
@@ -236,6 +239,42 @@ export class HumanReviewService {
     } catch (err) {
       console.error('[HumanReviewService] common-side-effects failed', err);
       // Non-fatal — review row is already saved; admin can repair via /admin/audit
+    }
+
+    // 6.5. Persist the compliance score the operator actually saw at decision
+    //      time. The initial `compliance_evaluation` artifact (from the
+    //      ComplianceCheck skill) only evaluated the IA draft via LLM, so it
+    //      doesn't credit the operator note / parameters / human edits. The
+    //      live `/compliance-recheck` does — that's what was showing 100% on
+    //      /validar. Capture that score now so re-opening the ticket via
+    //      /admin/analytics/tickets/:id (latest artifact wins) returns the
+    //      same number the operator saw, not the stale draft-only score.
+    if (decision === 'approved' || decision === 'corrected') {
+      try {
+        const draftForRecheck = humanFinalText ?? aiGeneratedText ?? undefined;
+        const recheck = await this.complaintService.recomputeCompliance(complaintId, draftForRecheck);
+        await this.artifactRepo.save(
+          this.artifactRepo.create({
+            artifactType: 'compliance_evaluation',
+            content: {
+              isCompliant: recheck.isCompliant,
+              complianceScore: recheck.complianceScore,
+              violations: [],
+              mandatoryFieldsStatus: recheck.mandatoryFieldsStatus,
+              recommendations: [],
+              source: 'human_decision_recheck',
+              decision,
+            },
+            version: 1,
+            stepExecutionId,
+            complaintId,
+          }),
+        );
+      } catch (err) {
+        console.error('[HumanReviewService] compliance-recheck persistence failed', err);
+        // Non-fatal — the review still went through; analytics will fall back
+        // to the older LLM-based compliance artifact.
+      }
     }
 
     // 7. Branch-specific resumption / cancellation logic
