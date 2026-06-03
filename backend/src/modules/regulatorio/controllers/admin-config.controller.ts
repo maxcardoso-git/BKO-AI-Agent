@@ -53,6 +53,12 @@ export class AdminConfigController {
     return { success: true };
   }
 
+  @Post('admin/personas/:id/clone')
+  @Roles(UserRole.ADMIN)
+  clonePersona(@Param('id') id: string): Promise<Persona> {
+    return this.adminConfigService.clonePersona(id);
+  }
+
   // ─── Templates ────────────────────────────────────────────────────────────
 
   @Get('admin/templates')

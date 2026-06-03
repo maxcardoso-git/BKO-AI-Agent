@@ -67,6 +67,33 @@ export class AdminConfigService {
     await this.personaRepo.delete(id);
   }
 
+  /**
+   * Clones a persona: copies every field (instructions, tone levels,
+   * required/forbidden expressions) into a new row with " (cópia)" appended
+   * to the name and tipologyId cleared, so the operator picks a new tipology
+   * in the edit dialog right after. Returns the new persona.
+   */
+  async clonePersona(id: string): Promise<Persona> {
+    const source = await this.personaRepo.findOneOrFail({ where: { id } });
+    const clone = this.personaRepo.create({
+      name: `${source.name} (cópia)`,
+      description: source.description,
+      formalityLevel: source.formalityLevel,
+      empathyLevel: source.empathyLevel,
+      assertivenessLevel: source.assertivenessLevel,
+      requiredExpressions: source.requiredExpressions,
+      forbiddenExpressions: source.forbiddenExpressions,
+      instructions: source.instructions,
+      isActive: source.isActive,
+      tipologyId: null, // operator picks a new tipology in the edit dialog
+    });
+    const saved = await this.personaRepo.save(clone);
+    // syncStyleMemory is a no-op when tipologyId is null, so the clone doesn't
+    // duplicate the source's style_memory rows. Once the operator picks a
+    // tipology in the edit dialog, updatePersona will sync them properly.
+    return saved;
+  }
+
   // ─── Templates ────────────────────────────────────────────────────────────
 
   listTemplates(): Promise<ResponseTemplate[]> {
