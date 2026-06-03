@@ -83,15 +83,60 @@ repo. Workaround used on 2026-06-01: do the commit on the VPS, push from
 there with a PAT, then reset the URL. If you ever hit this, **move the
 working copy out of iCloud Drive**.
 
+### Reference VPS path layout (read before deploying!)
+
+On `72.61.52.70` the canonical paths the running processes use are:
+
+| Service | pm2 name | exec cwd | Where to deploy code |
+|---|---|---|---|
+| Backend | `bko-backend` | `/opt/bko-agent/backend` | here, **not** /root |
+| Frontend | `bko-console` | `/root/EngDB/BKOConsole` | here |
+
+There used to be a second backend clone at `/root/EngDB/BKOAgent/backend/`
+that a previous session mistakenly used as deploy target — it was renamed
+to `/root/EngDB/BKOAgent.DEPRECATED/` on 2026-06-03 and is not in use.
+
+**Always verify before assuming a deploy worked:**
+
+```bash
+ssh root@72.61.52.70
+pm2 describe bko-backend | grep 'exec cwd'   # must show /opt/bko-agent/backend
+pm2 describe bko-console | grep 'exec cwd'   # must show /root/EngDB/BKOConsole
+```
+
+The migration runner connects to Postgres directly (port 5433), so
+`npm run migration:run` from **any** path that has the migration file
+applies it to the live DB — that's how a previous session ended up with
+a schema migration applied but the entity update only present in the
+wrong clone, causing 500 EntityPropertyNotFoundError when the column was
+referenced. If you add a column, deploy code + migration to the running
+path, not just one of them.
+
 ## Recent significant commits
 
 Backend (`maxcardoso-git/BKO-AI-Agent`):
+- `a7840e5` — persist compliance score the operator saw at decision time
+- `d4e2ab8` — persona free-text `instructions` field for LLM steering
+- `25760bc` — handoff package (this file + ARCHITECTURE + GLOSSARY + CLAUDE.md)
 - `8084438` — admin users management, resource secret masking, websocket deps
 - `4d2592f` — resolve LLM API key from DB (resource.apiKeyValue) with .env fallback
 - `1ab8625` — IQI override + learning loop, persona-aware smart-note, exports, mandatory-info admin
 - `ff2e98d` — turbina filter preset + admin reset endpoint
 - `75b9d85` — per-ticket analytics endpoint + read-only view for processed tickets
 - `778a11f` — AI response rating + compliance recheck endpoint
+
+Frontend (`maxcardoso-git/BKO-Console`):
+- `8751e5d` — textarea for free-text LLM instructions in /personas
+- `4885d66` — persona-check only blocks Aprovar, not Corrigir
+- `876c934` — CLAUDE.md handoff doc
+- `b2098b9` — initial snapshot matching VPS production
+
+> **Note 2026-06-03:** All commits between `8084438` and `a7840e5` had been
+> pushed to GitHub during March–June but were never actually running on the
+> reference VPS — the deploy target during that period was the stale
+> `/root/EngDB/BKOAgent/backend/` clone, while pm2 was running from
+> `/opt/bko-agent/backend/`. Fixed by full rsync to `/opt/` + rebuild +
+> restart on 2026-06-03. See the "Reference VPS path layout" section above.
 
 Frontend (`maxcardoso-git/BKO-Console`):
 - `b2098b9` — initial snapshot matching VPS production state (squashed; the
