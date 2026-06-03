@@ -11,7 +11,9 @@ export type SmartNoteAction =
   | 'resumir'
   | 'corrigir'
   | 'reformular'
-  | 'formalizar';
+  | 'formalizar'
+  | 'empatizar'
+  | 'simplificar';
 
 const ACTION_PROMPTS: Record<SmartNoteAction, string> = {
   elaborar:
@@ -24,6 +26,10 @@ const ACTION_PROMPTS: Record<SmartNoteAction, string> = {
     'Reescreva o texto abaixo de forma mais clara e objetiva, sem alterar o conteúdo factual. Em português do Brasil. Retorne apenas o texto reformulado, sem comentários, sem markdown e sem rótulos.',
   formalizar:
     'Reescreva o texto abaixo em registro formal de atendimento, próprio para nota de operador de backoffice. Mantenha todos os fatos. Em português do Brasil. Retorne apenas o texto final, sem comentários, sem markdown e sem rótulos.',
+  empatizar:
+    'Reescreva o texto abaixo tornando o tom mais acolhedor, cordial e empático com o consumidor, sem perder a clareza e sem alterar nenhum fato. Use linguagem humanizada, evite frieza burocrática. Em português do Brasil. Retorne apenas o texto final, sem comentários, sem markdown e sem rótulos.',
+  simplificar:
+    'Reescreva o texto abaixo em linguagem simples e acessível, eliminando jargões técnicos, abreviações internas e termos jurídicos desnecessários. O consumidor médio deve entender de primeira leitura. Mantenha todos os fatos (valores, datas, protocolos). Em português do Brasil. Retorne apenas o texto final, sem comentários, sem markdown e sem rótulos.',
 };
 
 function formalityLabel(n: number): string {
