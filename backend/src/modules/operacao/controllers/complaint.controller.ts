@@ -24,6 +24,10 @@ import {
   TemplateFieldsExtractorService,
   TemplateFieldsResponse,
 } from '../../ia/services/template-fields-extractor.service';
+import { MandatoryFieldExtractorAgent, ExtractedField } from '../../ia/services/mandatory-field-extractor.agent';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, IsNull } from 'typeorm';
+import { MandatoryInfoRule } from '../../regulatorio/entities/mandatory-info-rule.entity';
 
 @Controller('complaints')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
@@ -32,6 +36,11 @@ export class ComplaintController {
     private readonly complaintService: ComplaintService,
     private readonly ticketLockService: TicketLockService,
     private readonly templateFields: TemplateFieldsExtractorService,
+    private readonly mandatoryExtractor: MandatoryFieldExtractorAgent,
+    @InjectRepository(MandatoryInfoRule)
+    private readonly mandatoryRuleRepo: Repository<MandatoryInfoRule>,
+    @InjectRepository(Complaint)
+    private readonly complaintRepo: Repository<Complaint>,
   ) {}
 
   /** GET /api/complaints/:id/template-fields — operator-input fields
@@ -91,5 +100,36 @@ export class ComplaintController {
     @Body() body?: { draftText?: string },
   ): Promise<ComplianceRecheckResult> {
     return this.complaintService.recomputeCompliance(id, body?.draftText);
+  }
+
+  /** POST /api/complaints/:id/extract-mandatory-fields — runs the LLM over the
+   *  consumer complaint text and suggests values for every ANATEL mandatory
+   *  field (rules with tipologyId IS NULL, the global checklist). The
+   *  frontend surfaces these as pre-filled, editable inputs in the NoteForm
+   *  with an IA badge — operator reviews and overrides as needed before
+   *  hitting Processar. Strict: never invent values, returns hasSignal=false
+   *  when the text is silent on a field. */
+  @Post(':id/extract-mandatory-fields')
+  @HttpCode(200)
+  async extractMandatoryFields(
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<{ fields: ExtractedField[] }> {
+    const complaint = await this.complaintRepo.findOneOrFail({
+      where: { id },
+      select: ['id', 'rawText'],
+    });
+    const rules = await this.mandatoryRuleRepo.find({
+      where: { tipologyId: IsNull(), isActive: true },
+      order: { sortOrder: 'ASC' },
+    });
+    const fields = await this.mandatoryExtractor.extract(
+      complaint.rawText ?? '',
+      rules.map((r) => ({
+        fieldName: r.fieldName,
+        fieldLabel: r.fieldLabel,
+        fieldDescription: r.description ?? null,
+      })),
+    );
+    return { fields };
   }
 }

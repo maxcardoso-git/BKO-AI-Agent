@@ -20,6 +20,7 @@ import { Situation } from '../regulatorio/entities/situation.entity';
 import { Persona } from '../regulatorio/entities/persona.entity';
 import { TemplateFieldsExtractorService } from './services/template-fields-extractor.service';
 import { TemplateFieldsAdminController } from './controllers/template-fields-admin.controller';
+import { MandatoryFieldExtractorAgent } from './services/mandatory-field-extractor.agent';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { TemplateFieldsAdminController } from './controllers/template-fields-adm
     TokenUsageTrackerService,
     SmartNoteService,
     TemplateFieldsExtractorService,
+    MandatoryFieldExtractorAgent,
   ],
   exports: [
     ModelSelectorService,
@@ -49,6 +51,7 @@ import { TemplateFieldsAdminController } from './controllers/template-fields-adm
     TokenUsageTrackerService,
     SmartNoteService,
     TemplateFieldsExtractorService,
+    MandatoryFieldExtractorAgent,
   ],
 })
 export class IaModule {}
