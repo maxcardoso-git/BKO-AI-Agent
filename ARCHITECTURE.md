@@ -35,7 +35,7 @@ each functionality (`CLASSIFICATION`, `GENERATION`, `ANALYSIS`, `EXTRACTION`,
 | `auth` | Login, JWT issuance, opaque token exchange, RolesGuard | `auth.controller`, `jwt.strategy`, `roles.guard` |
 | `operacao` | Complaints, locks, users, access tokens, Turbina import, template override per ticket | `complaint`, `ticket-lock`, `admin-users`, `turbina-import`, `template-override` |
 | `execucao` | Ticket execution orchestration, analytics, observability, human review | `ticket-execution`, `analytics`, `observability`, `human-review`, `admin-feedback`, `admin-audit` |
-| `ia` | LLM agents and prompt building | `smart-note`, `template-fields-extractor`, `prompt-builder`, `draft-generator.agent`, `compliance-evaluator.agent`, `final-response-composer.agent`, `complaint-parsing.agent`, `model-selector`, `token-usage-tracker` |
+| `ia` | LLM agents and prompt building | `smart-note`, `template-fields-extractor`, `mandatory-field-extractor.agent`, `prompt-builder`, `draft-generator.agent`, `compliance-evaluator.agent`, `final-response-composer.agent`, `complaint-parsing.agent`, `model-selector`, `token-usage-tracker` |
 | `base-de-conhecimento` | KB ingestion, embedding generation, vector search, template resolver | `vector-search`, `document-ingestion`, `template-resolver`, `kb-manager` |
 | `memoria` | RAG over past human corrections (learning loop) | `memory-retrieval`, `memory-feedback`, `human-feedback-memory` entity |
 | `regulatorio` | ANATEL response templates, mandatory information rules | `response-template`, `mandatory-info-rule`, `admin-config` |
@@ -71,15 +71,28 @@ and the IA generates a draft answer that the operator reviews.
               │   GET /admin/analytics/tickets/:id (drill-down — OPERATOR ok)   │
               │   POST /complaints/:id/lock        (acquire ticket-lock)        │
               │   POST /complaints/:id/sentiment-preview (cached IA artifact)   │
+              │   POST /complaints/:id/extract-mandatory-fields  ← LLM pre-fill │
+              │       MandatoryFieldExtractorAgent reads rawText, suggests      │
+              │       values for the 6 global mandatory_info_rule fields.       │
+              │       Frontend pre-populates green NoteForm with 💡 IA badge.   │
+              │       hasSignal=false → leaves field empty (operator types).    │
               └────────────────────────────┬───────────────────────────────────┘
                                            │
                                            ▼
-                              ┌─────────────────────────────┐
-                              │ Operator hits "Processar"   │
-                              │ in the UI                   │
-                              └────────────┬────────────────┘
-                                           │
-                  POST /api/complaints/:id/executions/start
+                ┌─────────────────────────────────────────────────────┐
+                │ Operator reviews/edits the NoteForm                 │
+                │ Hits "Processar"                                    │
+                └────────────────────┬────────────────────────────────┘
+                                     │
+              POST /complaints/:id/compliance-recheck  ← pre-flight gate
+                                     │
+                      ┌──────────────┴──────────────┐
+                      ▼                             ▼
+              all 6 fields filled         any field empty
+                      │                             │
+                      ▼                             ▼
+   POST /complaints/:id/executions/start    Red modal "Voltar e preencher"
+                      │                     (HARD BLOCK — no escape hatch)
                                            │
                                            ▼
                 ┌────────────────────────────────────────────────────────┐
@@ -189,6 +202,27 @@ ai-sdk(provider, model, apiKey).generateText({ … })
 Embeddings have their own chain (`vector-search.resolveEmbeddingConfig`) but
 follow the same priority order. Both bypass DI to avoid circular deps —
 they query the DB directly via the same `DataSource` pool.
+
+## Prompt invariants (anti-hallucination)
+
+These rules are enforced in code (system prompts) AND configuration (model
+temperatures). They protect the regulatory contract — wrong dates / fake
+prazos in production drafts become real ANATEL fines.
+
+| Layer | Where | What |
+|---|---|---|
+| Temperature | `llm_model_config.composicao.temperature` | **0.2** (was 0.7 until 2026-06-04). Draft generator + composer both read it. Raise knowingly. |
+| Preamble | `prompt-builder.buildDraftResponsePrompt` first lines | "REGRAS ABSOLUTAS" block bans inventing dates, valores, prazos, telefones, ouvidoria, ações tomadas — comes BEFORE persona, template, mandatory fields, KB. |
+| Defaults | placeholder legend | **Removed entirely.** Old prompt had "padrão: 5 a 10 dias úteis" — literal source of one production hallucination. Don't reintroduce sample fillers. |
+| Missing data | when template placeholder lacks source | LLM writes `[dado pendente]`, never plausible value. Operator fills in /validar. |
+| Composer | `final-response-composer.agent` system prompt | Same REGRAS ABSOLUTAS preamble (second invention vector). |
+| Extractor | `mandatory-field-extractor.agent` | Uses temp 0.1 + strict `{ value, hasSignal }` schema. `hasSignal=false` → field stays empty (operator types). |
+| Operator data | `prompt-builder` PIPE-03 block | "USE estes dados como base factual. NAO invente valores nem datas que contradigam a nota." Parameters flow flat (legacy `dynamicFields` wrapping is auto-unwrapped). |
+
+Order matters in the system prompt: more recent concrete instructions win.
+That's why REGRAS ABSOLUTAS goes FIRST and persona instructions come AFTER
+template instructions — a stronger "no invent" loses to a weaker but more
+recent default if you flip the order.
 
 ## Database highlights
 
