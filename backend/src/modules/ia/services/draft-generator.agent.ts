@@ -64,7 +64,9 @@ export class DraftGeneratorAgent {
 
   /**
    * Generates a draft response for a complaint.
-   * Uses the 'composicao' model config (heavier model, higher temperature for creativity).
+   * Uses the 'composicao' model config. Temperature MUST stay low (~0.2) —
+   * this is regulatory writing, "creativity" here means hallucinating dates,
+   * prazos, phone numbers and ações tomadas. Raise knowingly only.
    */
   async generate(input: Record<string, unknown>): Promise<Record<string, unknown>> {
     const complaintText = (input['complaintText'] as string) ??

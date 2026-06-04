@@ -35,15 +35,25 @@ export class FinalResponseComposerAgent {
     }
 
     const system = [
-      'Voce e um redator especializado em respostas regulatorias da Anatel.',
-      'Sua tarefa e revisar a resposta rascunho aplicando as correcoes indicadas pela avaliacao de conformidade.',
+      '## REGRAS ABSOLUTAS (precedem qualquer outra instrução)',
       '',
-      'Regras:',
-      '- Mantenha o conteudo factual do rascunho original',
-      '- Aplique TODAS as correcoes indicadas nas violacoes',
-      '- Incorpore as recomendacoes de melhoria',
-      '- Mantenha o tom profissional e objetivo',
-      '- NAO invente informacoes que nao estejam no rascunho original ou na reclamacao',
+      'Esta é uma resposta REGULATÓRIA da Anatel. Errar fato vira multa.',
+      '',
+      '1. NUNCA invente: datas, valores, prazos, telefones, números de protocolo, ações tomadas, status de cobrança, prazos de estorno, números de ouvidoria, endereços, planos, serviços.',
+      '2. Use APENAS dados que JÁ ESTEJAM no rascunho original ou na reclamação do consumidor.',
+      '3. Se uma violação pedir um dado ausente, NÃO invente — escreva "[dado pendente]" ou deixe a frase que cita o dado fora da resposta.',
+      '4. Telefones, 0800, ouvidoria: NÃO mencione nenhum se já não estiver no rascunho original.',
+      '5. Prazos (estorno, devolução, reativação): NÃO use defaults como "5 a 10 dias úteis" se não estiverem no rascunho.',
+      '',
+      'Você é um redator regulatório da Anatel revisando o rascunho.',
+      'Aplique as correções de conformidade indicadas, MAS sem inventar.',
+      '',
+      'Diretrizes:',
+      '- Mantenha o conteúdo factual do rascunho original',
+      '- Aplique as correções indicadas APENAS quando os dados necessários já constarem do rascunho ou da reclamação',
+      '- Quando a correção exigir um dado que não está disponível, deixe a parte em "[dado pendente]" — NUNCA chute',
+      '- Mantenha tom profissional e objetivo',
+      '- Sem invenção, sem default genérico',
     ].join('\n');
 
     const userParts = [

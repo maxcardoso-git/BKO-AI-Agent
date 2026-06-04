@@ -87,21 +87,41 @@ export class PromptBuilderService {
   buildDraftResponsePrompt(ctx: PromptContext, customSystemPrompt?: string | null): { system: string; user: string } {
     const system: string[] = [];
 
+    // -------------------------------------------------------------------
+    // REGRAS ABSOLUTAS — precedem QUALQUER outra instrução, persona ou template.
+    // O bloco existe porque o modelo, sem isso, alucinava datas, prazos,
+    // telefones, ações tomadas e valores "plausíveis" para preencher
+    // placeholders. Resposta regulatória NÃO tolera invenção.
+    // -------------------------------------------------------------------
+    system.push(
+      '## REGRAS ABSOLUTAS (precedem tudo, inclusive template e persona)',
+      '',
+      'Esta é uma resposta REGULATÓRIA da Anatel. Errar fato vira multa.',
+      '',
+      '1. NUNCA invente: datas, valores, prazos, telefones, números de protocolo, ações tomadas, status de cobrança, prazos de estorno, números de ouvidoria, endereços, planos, serviços.',
+      '2. Use APENAS dados explícitos de DUAS fontes: (a) reclamação do consumidor e (b) nota do operador + parâmetros estruturados. Não invente nada além disso.',
+      '3. Se o template tiver um placeholder e a fonte NÃO tiver dado correspondente, escreva literalmente "A ser informado pela operadora" no lugar — NÃO chute valor plausível.',
+      '4. Datas: copie EXATAMENTE como vieram da nota do operador. Não converta, não reformule, não infira datas que não estejam na nota.',
+      '5. Telefones, 0800, ouvidoria: só mencione se aparecerem explicitamente na nota do operador ou no texto da reclamação. Caso contrário, NÃO escreva nada sobre canal de contato.',
+      '6. Prazos (estorno, devolução, reativação): só mencione se vierem da nota do operador. Sem default. Sem "5 a 10 dias úteis" automático.',
+      '7. Ações tomadas pela operadora (reativação, cancelamento, estorno, ressarcimento): só se constarem na nota do operador campo "providencia_adotada" ou texto livre. Nunca presuma ação.',
+      '8. Se faltar dado para alguma seção do template, é PREFERÍVEL deixar a seção vazia com "[dado pendente]" do que preencher com texto plausível.',
+      '',
+    );
+
     if (customSystemPrompt) {
       system.push(customSystemPrompt);
     } else {
       system.push(
-        'Voce e um redator especializado em respostas a reclamacoes de telecomunicacoes para a Anatel.',
-        'Sua tarefa e redigir uma resposta completa e em conformidade regulatoria.',
+        'Você é um redator regulatório da Anatel.',
+        'Sua tarefa: redigir resposta ao consumidor usando exclusivamente os fatos fornecidos.',
         '',
-        'Diretrizes:',
-        '- A resposta deve ser clara, objetiva e profissional',
-        '- Deve enderecar todos os pontos da reclamacao do consumidor',
-        '- Deve citar as acoes tomadas pela operadora',
-        '- OBRIGATORIO: Quando um template IQI estiver disponivel, siga sua estrutura EXATAMENTE',
-        '- Preencha todos os {{placeholders}} com os dados reais fornecidos',
-        '- NAO adicione secoes que nao existam no template',
-        '- NAO omita secoes do template',
+        'Diretrizes (subordinadas às REGRAS ABSOLUTAS acima):',
+        '- Resposta clara, objetiva, profissional, em português do Brasil',
+        '- Endereçar APENAS os pontos da reclamação que tenham fato correspondente na nota do operador',
+        '- Quando um template IQI estiver presente, seguir sua estrutura',
+        '- NÃO adicionar seções ausentes no template',
+        '- NÃO omitir seções do template — se faltar dado, use "[dado pendente]"',
       );
     }
 
@@ -115,21 +135,11 @@ export class PromptBuilderService {
     if (ctx.template) {
       system.push(
         '',
-        '## TEMPLATE OBRIGATORIO (siga EXATAMENTE esta estrutura):',
-        'Voce DEVE usar este template como base da resposta.',
-        'Substitua cada {{placeholder}} pelo valor real correspondente.',
-        'NAO invente campos. Se um dado nao estiver disponivel, use "Nao informado".',
+        '## TEMPLATE IQI (estrutura de referência)',
+        'Use o template abaixo como base estrutural da resposta.',
+        'IMPORTANTE: substitua cada placeholder ([data], [número], XX/XX, etc.) APENAS pelo valor real correspondente da nota do operador ou da reclamação. Se não houver valor, escreva "[dado pendente]" no lugar do placeholder.',
         '',
         ctx.template.templateContent,
-        '',
-        '## Legenda dos placeholders:',
-        '- {{nome_reclamante}} = nome do assinante (se disponivel) ou "Consumidor"',
-        '- {{numero_protocolo}} = numero do protocolo Anatel da reclamacao',
-        '- {{data_reclamacao}} = data de abertura da reclamacao se disponivel; caso contrario, use a data de analise fornecida nos dados abaixo',
-        '- {{providencia_adotada}} = descreva objetivamente a acao tomada pela operadora',
-        '- {{status_cobranca}} = "confirmada e o estorno sera processado" ou "contestada" conforme o caso',
-        '- {{prazo_estorno}} = numero de dias uteis para o credito (padrao: 5 a 10 dias uteis)',
-        '- {{status_cancelamento}}, {{plano_servico}}, {{tipo_servico}}, etc. = use conforme o template aplicavel',
       );
     }
 
