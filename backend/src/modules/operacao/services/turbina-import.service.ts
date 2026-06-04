@@ -83,6 +83,7 @@ export interface TurbinaRow {
 export interface TurbinaImportResult {
   imported: number;
   skipped: number;
+  deduped: number;
   errors: Array<{ protocol: string | null; reason: string }>;
 }
 
@@ -146,27 +147,50 @@ export class TurbinaImportService {
 
   /**
    * Imports a batch of rows from the Turbina CSV.
-   * - Skips rows whose protocolNumber already exists.
+   * - Deduplicates repeated protocols within the batch, keeping the most recent (deduped count).
+   * - Skips rows whose protocolNumber already exists in the DB (skipped count).
    * - Maps Modalidade → Tipology (by case-insensitive label/key match) with fallback to a tipology
    *   whose key is 'outros' (auto-created if missing).
-   * - Returns count of imported / skipped / errors.
+   * - Inserts chunk by chunk, falling back to row-by-row on a chunk failure so one bad row
+   *   never drops the rest of the chunk.
+   * - Returns count of imported / skipped / deduped / errors.
    */
   async importBatch(rows: TurbinaRow[]): Promise<TurbinaImportResult> {
-    const result: TurbinaImportResult = { imported: 0, skipped: 0, errors: [] };
+    const result: TurbinaImportResult = { imported: 0, skipped: 0, deduped: 0, errors: [] };
 
     // 1. Filter rows with a protocol
-    const valid = rows.filter((r) => clean(r.Protocolo));
-    if (valid.length === 0) return result;
+    const withProtocol = rows.filter((r) => clean(r.Protocolo));
+    if (withProtocol.length === 0) return result;
 
-    // 2. Check existing protocols in one query
-    const protocols = Array.from(new Set(valid.map((r) => clean(r.Protocolo)!).filter(Boolean)));
+    // 2. Deduplicate within the batch by protocol. The Turbina export repeats a
+    //    protocol across rows (reopened tickets / multiple tasks). Keep the most
+    //    recent occurrence (latest Data de Cadastro). Without this, two rows with
+    //    the same protocol collide on UNIQUE(protocolNumber) and abort the whole
+    //    insert chunk, dropping unrelated rows alongside them.
+    const byProtocol = new Map<string, TurbinaRow>();
+    for (const row of withProtocol) {
+      const protocolNumber = clean(row.Protocolo)!;
+      const current = byProtocol.get(protocolNumber);
+      if (!current) {
+        byProtocol.set(protocolNumber, row);
+        continue;
+      }
+      result.deduped += 1;
+      const currentAt = parseDate(current.DataCadastro)?.getTime() ?? 0;
+      const rowAt = parseDate(row.DataCadastro)?.getTime() ?? 0;
+      if (rowAt >= currentAt) byProtocol.set(protocolNumber, row);
+    }
+    const valid = Array.from(byProtocol.values());
+
+    // 3. Check existing protocols in one query
+    const protocols = Array.from(byProtocol.keys());
     const existing = await this.complaintRepo.find({
       where: { protocolNumber: In(protocols) },
       select: ['protocolNumber'],
     });
     const existingSet = new Set(existing.map((c) => c.protocolNumber));
 
-    // 3. Resolve tipologies in one query
+    // 4. Resolve tipologies in one query
     const tipologies = await this.tipologyRepo.find();
     const tipologyByLabel = new Map<string, Tipology>();
     tipologies.forEach((t) => {
@@ -189,7 +213,7 @@ export class TurbinaImportService {
       }
     }
 
-    // 4. Build entities to insert
+    // 5. Build entities to insert
     const entitiesToInsert: Complaint[] = [];
     for (const row of valid) {
       const protocolNumber = clean(row.Protocolo)!;
@@ -287,29 +311,40 @@ export class TurbinaImportService {
       }
     }
 
-    if (entitiesToInsert.length > 0) {
+    // 6. Insert in chunks. If a chunk throws (e.g. an unexpected UNIQUE collision),
+    //    retry it row by row so a single bad row is recorded as one error instead of
+    //    aborting ~100 valid rows alongside it.
+    const saved: Complaint[] = [];
+    const CHUNK_SIZE = 100;
+    for (let i = 0; i < entitiesToInsert.length; i += CHUNK_SIZE) {
+      const chunk = entitiesToInsert.slice(i, i + CHUNK_SIZE);
       try {
-        // chunked save for performance; TypeORM chunk option splits inserts
-        const saved = await this.complaintRepo.save(entitiesToInsert, { chunk: 100 });
-        result.imported = saved.length;
-
-        // Emit ticket_created timing event (idempotent) so /admin/audit/timings can compute tempo_total / tempo_sla
-        for (const c of saved) {
+        saved.push(...(await this.complaintRepo.save(chunk)));
+      } catch (chunkErr) {
+        this.logger.warn(`Chunk save failed, retrying row by row: ${chunkErr}`);
+        for (const entity of chunk) {
           try {
-            await this.timingEventService.emitOnce(
-              'ticket_created',
-              c.id,
-              null,
-              null,
-              c.createdAt ?? new Date(),
-            );
-          } catch (e) {
-            this.logger.warn(`ticket_created emit failed for ${c.protocolNumber}: ${e}`);
+            saved.push(await this.complaintRepo.save(entity));
+          } catch (rowErr) {
+            result.errors.push({ protocol: entity.protocolNumber, reason: String(rowErr) });
           }
         }
-      } catch (err) {
-        this.logger.error(`Bulk save failed: ${err}`);
-        result.errors.push({ protocol: null, reason: `bulk save failed: ${err}` });
+      }
+    }
+    result.imported = saved.length;
+
+    // Emit ticket_created timing event (idempotent) so /admin/audit/timings can compute tempo_total / tempo_sla
+    for (const c of saved) {
+      try {
+        await this.timingEventService.emitOnce(
+          'ticket_created',
+          c.id,
+          null,
+          null,
+          c.createdAt ?? new Date(),
+        );
+      } catch (e) {
+        this.logger.warn(`ticket_created emit failed for ${c.protocolNumber}: ${e}`);
       }
     }
 
