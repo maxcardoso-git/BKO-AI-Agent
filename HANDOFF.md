@@ -1,6 +1,6 @@
 # Handoff — BKO AI Agent
 
-Snapshot of the project as of **2026-06-04**. Read this once; refresh by
+Snapshot of the project as of **2026-06-08**. Read this once; refresh by
 running `git log` after.
 
 ## TL;DR
@@ -88,6 +88,48 @@ running `git log` after.
   fallback only. `OPENAI_API_KEY` is empty on the VPS `.env`.
 - Embeddings: OpenAI `text-embedding-3-small`, 1536 dims, pgvector.
 - Secret masking is end-to-end: backend returns `first8***last4` + `has*` flags.
+
+### Turbina bulk import + tipology routing (2026-06-08)
+- **In-batch dedup + collision-tolerant insert** (`turbina-import.service.ts`):
+  the Turbina export repeats a protocol across rows (reopened tickets / multiple
+  tasks). With `UNIQUE(protocolNumber)` and no in-batch dedup, two rows sharing
+  a protocol aborted the whole `save()` chunk and **silently dropped ~1393 valid
+  rows behind only 7 generic errors**. Now: dedup by protocol (keep latest
+  `Data de Cadastro`), insert chunk-by-chunk with row-by-row fallback, and a
+  `deduped` counter in `TurbinaImportResult`.
+- **Modalidade → tipology alias** (`MODALIDADE_TIPOLOGY_ALIAS`): the importer
+  matched Modalidade→tipology by **exact label**, so verbose ANATEL Modalidades
+  fell into the "Outros" fallback — **49% of complaints (1259/2587)** got the
+  generic default IQI/persona instead of a specific one. The alias map routes
+  them. Product-confirmed mapping:
+
+  | Modalidade | → tipology key |
+  |---|---|
+  | Plano de serviços, Oferta, Bônus, Promoções… | `plano_servicos` |
+  | Qualidade, Funcionamento e Reparo / Instalação ou Ativação… | `qualidade` |
+  | Bloqueio, desbloqueio ou Suspensão / Ressarcimento / Crédito Pré-pago | `cobranca` |
+  | Dados cadastrais ou número da linha | `atendimento` |
+
+- **One-time data re-map** already run on the reference VPS DB (1259 rows,
+  "Outros" → 0). For any other environment (e.g. a fresh dump) the SQL is
+  versioned at **`backend/scripts/remap-modalidade-tipologia.sql`** (idempotent,
+  preview + transaction + verify). No schema change → **no migration**.
+
+### Templates IQI admin screen (2026-06-08)
+- `/templates` resolves `tipologyId → name` (editor badge + list cards) via
+  `useTipologies()`, and adds a **tipologia filter dropdown** combined with the
+  search (AND). Options limited to tipologies that actually have templates.
+
+### Message generation uses BOTH persona AND IQI template (verified 2026-06-08)
+- `buildDraftResponsePrompt` injects, in order: REGRAS ABSOLUTAS → persona tone
+  + `instructions` (style/additions) → **IQI `templateContent` as the message
+  structure** → mandatory fields → operator note → KB/memory. So **persona =
+  tone/additions, IQI template = format/skeleton**. Because the template comes
+  *after* the persona, structural instructions inside a persona would lose to
+  the template — **keep personas to tone/style/expressions only**. Coverage
+  matters: a complaint whose tipology has no template falls back to a default
+  template (3 exist), which is why the routing fix above (no more "Outros") is
+  what makes the specific IQIs actually reach the draft.
 
 ## Anti-hallucination invariants
 
@@ -194,9 +236,30 @@ only present in the wrong clone, causing 500 `EntityPropertyNotFoundError`.
 **If you add a column, deploy code + migration to the running path, not
 just one of them.**
 
+### Backend restart recompiles from source (slow) — 2026-06-08
+
+`bko-backend` is started via `pm2 → npm start → nest start`, and
+`nest-cli.json` has `deleteOutDir: true`. So **every `pm2 restart bko-backend`
+deletes `dist/` and recompiles the whole project from `src/` on boot** — on the
+loaded reference VPS this can take **anywhere from ~25s to ~11min** before the
+port (3111) comes back. It is not hung; watch with:
+
+```bash
+ss -ltn | grep :3111            # nothing until the compile finishes
+ps -o %cpu,etime -p $(pgrep -f 'node.*nest start')   # high CPU = still compiling
+```
+
+A deploy of a `src/*.ts` change is: `scp` the file → `npm run build` (optional,
+`nest start` rebuilds anyway) → `pm2 restart bko-backend` → wait for 3111.
+**Recommended cleanup (not yet done):** switch pm2 to run the prebuilt dist
+(`node dist/src/main.js`, `deleteOutDir` off) to make restarts take seconds.
+
 ## Recent significant commits
 
 Backend (`maxcardoso-git/BKO-AI-Agent`):
+- `240e1a7` — chore(scripts): idempotent re-map SQL for Modalidade → tipology
+- `98273cc` — feat(turbina-import): alias verbose ANATEL Modalidade → internal tipology
+- `ff3c14d` — fix(turbina-import): dedup protocols in-batch + collision-tolerant insert
 - `c305bed` — fix(prompts): close hallucination paths in draft generator + composer
 - `d24e003` — feat(ia): pre-flight extraction of mandatory ANATEL fields on /processar
 - `3201ed0` — feat(smart-note): add Empatizar + Simplificar actions
@@ -209,6 +272,7 @@ Backend (`maxcardoso-git/BKO-AI-Agent`):
 - `4d2592f` — refactor: resolve LLM API key from DB with .env fallback
 
 Frontend (`maxcardoso-git/BKO-Console`):
+- `0e7ad07` — feat(templates): show tipologia name instead of UUID + tipologia filter
 - `62245c4` — fix(processar): preserve ticket prefill through IA extract + hard-block on pendências
 - `80c3f52` — feat(processar): IA auto-fills mandatory fields + compliance gate on Processar
 - `c4b73d9` — feat(validar): UX overhaul of Smart Note + footer confirmations + draft header
@@ -217,6 +281,14 @@ Frontend (`maxcardoso-git/BKO-Console`):
 - `4885d66` — fix(validar): persona-check only blocks Aprovar, not Corrigir
 - `876c934` — docs: CLAUDE.md handoff
 - `b2098b9` — initial snapshot matching VPS production
+
+> **Mirror repo `TiagoMacedoso/bko` (2026-06-08):** a third party runs this
+> product from a **monorepo** `TiagoMacedoso/bko` (`BKO-AI-Agent/backend` +
+> `BKO-Console` + `db-dumps/` + `docker-compose.yml`). The Turbina dedup,
+> the Modalidade alias, the templates-screen change and the re-map SQL were
+> mirrored there (HEAD `eacf83a`). When you ship a backend/frontend fix that
+> they need, push the same change into that monorepo's subfolders too. They
+> deploy from a separate DB, so the re-map SQL must be run on their side.
 
 > **Note 2026-06-03:** Commits between `8084438` and `a7840e5` were pushed
 > to GitHub during March–June but **never actually ran on the reference VPS**
