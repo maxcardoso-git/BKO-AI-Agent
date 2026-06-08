@@ -133,6 +133,22 @@ function parseDecimal(value: string | null | undefined): number | null {
   return isNaN(n) ? null : n;
 }
 
+/**
+ * ANATEL "Modalidade" values are more granular/verbose than our internal
+ * tipology taxonomy, so an exact label match drops most rows into "Outros".
+ * This maps the verbose Modalidade string (lowercased, exactly as exported in
+ * clean UTF-8) to the matching tipology `key`.
+ */
+const MODALIDADE_TIPOLOGY_ALIAS: Record<string, string> = {
+  'plano de serviços, oferta, bônus, promoções e mensagens publicitárias': 'plano_servicos',
+  'qualidade, funcionamento e reparo': 'qualidade',
+  'bloqueio, desbloqueio ou suspensão': 'cobranca',
+  'instalação ou ativação ou habilitação': 'qualidade',
+  'dados cadastrais ou número da linha': 'atendimento',
+  ressarcimento: 'cobranca',
+  'crédito pré-pago': 'cobranca',
+};
+
 @Injectable()
 export class TurbinaImportService {
   private readonly logger = new Logger(TurbinaImportService.name);
@@ -223,8 +239,12 @@ export class TurbinaImportService {
       }
 
       const modalidade = clean(row.Modalidade);
+      const modalidadeKey = modalidade?.toLowerCase();
+      const aliasKey = modalidadeKey ? MODALIDADE_TIPOLOGY_ALIAS[modalidadeKey] : undefined;
       const tipology: Tipology | null =
-        (modalidade ? tipologyByLabel.get(modalidade.toLowerCase()) : undefined) ?? fallbackTipology;
+        (aliasKey ? tipologyByLabel.get(aliasKey) : undefined) ??
+        (modalidadeKey ? tipologyByLabel.get(modalidadeKey) : undefined) ??
+        fallbackTipology;
 
       const rawText = clean(row.DescricaoReclamacao) ?? '';
 
