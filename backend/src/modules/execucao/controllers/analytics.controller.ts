@@ -1,4 +1,6 @@
-import { Controller, Get, Param, ParseUUIDPipe, Query, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe, Query, NotFoundException, Res } from '@nestjs/common';
+import type { Response } from 'express';
+import * as ExcelJS from 'exceljs';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { UserRole } from '../../operacao/entities/user.entity';
 import { AnalyticsService } from '../services/analytics.service';
@@ -30,6 +32,112 @@ export class AnalyticsController {
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
     });
+  }
+
+  /** GET /api/admin/analytics/tickets/export — XLSX of ALL tickets matching the
+   *  filters (no pagination), with the full treatment data: complaint text, AI
+   *  analysis, compliance, response, evaluation, decision. ADMIN + SUPERVISOR.
+   *  Declared before tickets/:id so the literal path wins over the param route. */
+  @Get('tickets/export')
+  @Roles(UserRole.ADMIN, UserRole.SUPERVISOR)
+  async export(
+    @Res() res: Response,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('tipologyKey') tipologyKey?: string,
+    @Query('decision') decision?: 'approved' | 'corrected' | 'rejected',
+    @Query('rating') rating?: string,
+  ): Promise<void> {
+    const rows = await this.analytics.exportRows({
+      from,
+      to,
+      tipologyKey,
+      decision,
+      rating: rating ? Number(rating) : undefined,
+    });
+
+    const decisionLabel = (d: unknown): string =>
+      d === 'approved' ? 'Aprovado' : d === 'corrected' ? 'Corrigido' : d === 'rejected' ? 'Reprovado' : '—';
+    const riskLabel = (r: unknown): string =>
+      r === 'critical' ? 'Crítico' : r === 'high' ? 'Alto' : r === 'medium' ? 'Médio' : r === 'low' ? 'Baixo' : '—';
+    const fmtDate = (v: unknown): string => {
+      if (!v) return '';
+      const d = v instanceof Date ? v : new Date(String(v));
+      return isNaN(d.getTime()) ? '' : d.toLocaleString('pt-BR');
+    };
+    const threats = (r: Record<string, unknown>): string =>
+      [r.has_legal_threat ? 'jurídico' : null, r.has_social_media_threat ? 'mídia' : null, r.has_prior_complaints ? 'reincidente' : null]
+        .filter(Boolean)
+        .join(', ');
+    const violations = (v: unknown): string => {
+      if (!Array.isArray(v) || v.length === 0) return '';
+      return v.map((x: any) => x?.rule ?? x?.message ?? x?.fieldLabel ?? JSON.stringify(x)).join(' | ');
+    };
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'BKO Agent';
+    wb.created = new Date();
+    const ws = wb.addWorksheet('Análises');
+    ws.columns = [
+      { header: 'Protocolo', key: 'protocolo', width: 20 },
+      { header: 'Data reclamação', key: 'data', width: 18 },
+      { header: 'Tipologia', key: 'tipologia', width: 24 },
+      { header: 'Risco', key: 'risco', width: 10 },
+      { header: 'Reclamação', key: 'reclamacao', width: 60 },
+      { header: 'Propensão IA (%)', key: 'propensao', width: 14 },
+      { header: 'Tom (IA)', key: 'tom', width: 16 },
+      { header: 'Ameaças (IA)', key: 'ameacas', width: 22 },
+      { header: 'Confiança tipologia (IA)', key: 'conf', width: 20 },
+      { header: 'IQI usado', key: 'iqi', width: 28 },
+      { header: 'Conformidade (%)', key: 'conf_pct', width: 16 },
+      { header: 'Conforme?', key: 'conforme', width: 12 },
+      { header: 'Violações', key: 'violacoes', width: 40 },
+      { header: 'Resposta', key: 'resposta', width: 60 },
+      { header: 'Avaliação IA (1-3)', key: 'avaliacao', width: 16 },
+      { header: 'Resultado', key: 'resultado', width: 14 },
+      { header: 'Operador', key: 'operador', width: 24 },
+      { header: 'Revisado em', key: 'revisado', width: 18 },
+    ];
+    const header = ws.getRow(1);
+    header.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1F2937' } };
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+      cell.alignment = { vertical: 'middle', horizontal: 'left', wrapText: true };
+    });
+    header.height = 22;
+
+    for (const r of rows as Record<string, unknown>[]) {
+      ws.addRow({
+        protocolo: r.protocol_number ?? '',
+        data: fmtDate(r.data_documento),
+        tipologia: (r.tipology_label ?? r.tipology_key ?? '—') as string,
+        risco: riskLabel(r.risk_level),
+        reclamacao: (r.raw_text ?? '') as string,
+        propensao: r.propensity_score != null ? Math.round(Number(r.propensity_score)) : '',
+        tom: (r.emotional_tone ?? '') as string,
+        ameacas: threats(r),
+        conf: r.tipology_confidence != null ? `${Math.round(Number(r.tipology_confidence) * 100)}%` : '',
+        iqi: (r.iqi_template_name ?? '') as string,
+        conf_pct: r.compliance_score != null ? Math.round(Number(r.compliance_score) * 100) : '',
+        conforme: r.is_compliant == null ? '' : r.is_compliant ? 'Sim' : 'Não',
+        violacoes: violations(r.violations),
+        resposta: (r.response_text ?? '') as string,
+        avaliacao: r.rating != null ? Number(r.rating) : '',
+        resultado: decisionLabel(r.decision),
+        operador: (r.reviewer_name ?? '') as string,
+        revisado: fmtDate(r.reviewed_at),
+      });
+    }
+    ws.getColumn('reclamacao').alignment = { wrapText: true, vertical: 'top' };
+    ws.getColumn('resposta').alignment = { wrapText: true, vertical: 'top' };
+
+    const ab = await wb.xlsx.writeBuffer();
+    const nodeBuffer = Buffer.from(ab);
+    const today = new Date().toISOString().split('T')[0];
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="analises-${today}.xlsx"`);
+    res.setHeader('Content-Length', String(nodeBuffer.length));
+    res.end(nodeBuffer);
   }
 
   /** GET /api/admin/analytics/tickets/:id — full drill-down for a single ticket.

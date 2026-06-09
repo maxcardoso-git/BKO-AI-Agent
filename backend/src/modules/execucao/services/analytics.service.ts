@@ -16,6 +16,7 @@ export interface TicketAnalyticsRow {
   complaintId: string;
   protocolNumber: string;
   createdAt: string;
+  dataDocumento: string | null;
   riskLevel: string | null;
   tipologyKey: string | null;
   tipologyLabel: string | null;
@@ -69,9 +70,12 @@ export class AnalyticsService {
       filters.rating ?? null,
     ];
 
+    // Date range filters on the ANATEL complaint date (dataDocumento), not the
+    // import time. `to` is end-of-day inclusive (< to + 1 day) to avoid the
+    // off-by-one that excluded the selected day.
     const whereSql = `
-      WHERE ($1::timestamp IS NULL OR c."createdAt" >= $1::timestamp)
-        AND ($2::timestamp IS NULL OR c."createdAt" <= $2::timestamp)
+      WHERE ($1::date IS NULL OR c."dataDocumento" >= $1::date)
+        AND ($2::date IS NULL OR c."dataDocumento" < ($2::date + INTERVAL '1 day'))
         AND ($3::text IS NULL OR t.key = $3)
         AND ($4::text IS NULL OR lr.status = $4)
         AND ($5::int IS NULL OR lr."aiResponseRating" = $5)
@@ -122,6 +126,7 @@ export class AnalyticsService {
         c.id AS complaint_id,
         c."protocolNumber" AS protocol_number,
         c."createdAt" AS created_at,
+        c."dataDocumento" AS data_documento,
         c."riskLevel" AS risk_level,
         t.key AS tipology_key,
         t.label AS tipology_label,
@@ -148,7 +153,7 @@ export class AnalyticsService {
       LEFT JOIN "user" u ON u.id::text = lr."reviewerUserId"
       LEFT JOIN tmt_per_complaint tmt ON tmt."complaintId" = c.id
       ${whereSql}
-      ORDER BY c."createdAt" DESC
+      ORDER BY c."dataDocumento" DESC NULLS LAST, c."createdAt" DESC
       LIMIT $6 OFFSET $7
     `;
 
@@ -170,6 +175,12 @@ export class AnalyticsService {
       complaintId: String(r.complaint_id),
       protocolNumber: String(r.protocol_number),
       createdAt: r.created_at instanceof Date ? (r.created_at as Date).toISOString() : String(r.created_at ?? ''),
+      dataDocumento:
+        r.data_documento instanceof Date
+          ? (r.data_documento as Date).toISOString()
+          : r.data_documento != null
+            ? String(r.data_documento)
+            : null,
       riskLevel: r.risk_level as string | null,
       tipologyKey: r.tipology_key as string | null,
       tipologyLabel: r.tipology_label as string | null,
@@ -288,6 +299,81 @@ export class AnalyticsService {
     );
 
     return (baseRows as Record<string, unknown>[])[0] ?? null;
+  }
+
+  /**
+   * Same filtered set as listTickets() but WITHOUT pagination and enriched with
+   * the full treatment data (complaint text, AI analysis, compliance, response,
+   * decision) for the XLSX export. Capped at 50k rows as a safety bound.
+   */
+  async exportRows(filters: AnalyticsFilters): Promise<Record<string, unknown>[]> {
+    const params: unknown[] = [
+      filters.from ?? null,
+      filters.to ?? null,
+      filters.tipologyKey ?? null,
+      filters.decision ?? null,
+      filters.rating ?? null,
+    ];
+
+    const sql = `
+      WITH artifacts_pivot AS (
+        SELECT
+          a."complaintId",
+          (ARRAY_AGG(a.content ORDER BY a."createdAt" DESC) FILTER (WHERE a."artifactType" = 'customer_sentiment'))[1] AS sentiment,
+          (ARRAY_AGG(a.content ORDER BY a."createdAt" DESC) FILTER (WHERE a."artifactType" = 'typology_classification'))[1] AS typology_class,
+          (ARRAY_AGG(a.content ORDER BY a."createdAt" DESC) FILTER (WHERE a."artifactType" = 'compliance_evaluation'))[1] AS compliance,
+          (ARRAY_AGG(a.content ORDER BY a."createdAt" DESC) FILTER (WHERE a."artifactType" = 'iqi_template'))[1] AS iqi,
+          (ARRAY_AGG(a.content ORDER BY a."createdAt" DESC) FILTER (WHERE a."artifactType" = 'draft_response'))[1] AS draft_response,
+          (ARRAY_AGG(a.content ORDER BY a."createdAt" DESC) FILTER (WHERE a."artifactType" = 'final_response'))[1] AS final_response
+        FROM artifact a
+        WHERE a."artifactType" IN ('customer_sentiment','typology_classification','compliance_evaluation','iqi_template','draft_response','final_response')
+        GROUP BY a."complaintId"
+      ),
+      latest_review AS (
+        SELECT DISTINCT ON ("complaintId")
+          "complaintId", "aiResponseRating", status, "reviewedAt", "reviewerUserId", "humanFinalText"
+        FROM human_review
+        WHERE "reviewedAt" IS NOT NULL
+        ORDER BY "complaintId", "reviewedAt" DESC
+      )
+      SELECT
+        c."protocolNumber" AS protocol_number,
+        c."dataDocumento" AS data_documento,
+        t.label AS tipology_label,
+        t.key AS tipology_key,
+        c."riskLevel" AS risk_level,
+        c."rawText" AS raw_text,
+        c."clienteNome" AS cliente_nome,
+        c."cpfCnpjCliente" AS cpf_cnpj_cliente,
+        (ap.sentiment ->> 'propensityScore')::float AS propensity_score,
+        ap.sentiment ->> 'emotionalTone' AS emotional_tone,
+        COALESCE((ap.sentiment ->> 'hasLegalThreat')::boolean, false) AS has_legal_threat,
+        COALESCE((ap.sentiment ->> 'hasSocialMediaThreat')::boolean, false) AS has_social_media_threat,
+        COALESCE((ap.sentiment ->> 'hasPriorComplaints')::boolean, false) AS has_prior_complaints,
+        (ap.typology_class ->> 'confidence')::float AS tipology_confidence,
+        ap.iqi ->> 'templateName' AS iqi_template_name,
+        (ap.compliance ->> 'complianceScore')::float AS compliance_score,
+        (ap.compliance ->> 'isCompliant')::boolean AS is_compliant,
+        ap.compliance -> 'violations' AS violations,
+        COALESCE(lr."humanFinalText", ap.final_response ->> 'finalResponse', ap.draft_response ->> 'draftResponse') AS response_text,
+        lr."aiResponseRating" AS rating,
+        lr.status AS decision,
+        lr."reviewedAt" AS reviewed_at,
+        u.name AS reviewer_name
+      FROM complaint c
+      LEFT JOIN tipology t ON t.id = c."tipologyId"
+      LEFT JOIN artifacts_pivot ap ON ap."complaintId" = c.id
+      LEFT JOIN latest_review lr ON lr."complaintId" = c.id
+      LEFT JOIN "user" u ON u.id::text = lr."reviewerUserId"
+      WHERE ($1::date IS NULL OR c."dataDocumento" >= $1::date)
+        AND ($2::date IS NULL OR c."dataDocumento" < ($2::date + INTERVAL '1 day'))
+        AND ($3::text IS NULL OR t.key = $3)
+        AND ($4::text IS NULL OR lr.status = $4)
+        AND ($5::int IS NULL OR lr."aiResponseRating" = $5)
+      ORDER BY c."dataDocumento" DESC NULLS LAST, c."createdAt" DESC
+      LIMIT 50000
+    `;
+    return this.dataSource.query(sql, params);
   }
 
   /** List of distinct tipology keys + labels for the filter dropdown. */
