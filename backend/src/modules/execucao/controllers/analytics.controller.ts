@@ -65,6 +65,13 @@ export class AnalyticsController {
       const d = v instanceof Date ? v : new Date(String(v));
       return isNaN(d.getTime()) ? '' : d.toLocaleString('pt-BR');
     };
+    const fmtDuration = (ms: unknown): string => {
+      if (ms == null || isNaN(Number(ms))) return '';
+      const totalSec = Math.round(Number(ms) / 1000);
+      const min = Math.floor(totalSec / 60);
+      const sec = totalSec % 60;
+      return `${min}m ${sec}s`;
+    };
     const threats = (r: Record<string, unknown>): string =>
       [r.has_legal_threat ? 'jurídico' : null, r.has_social_media_threat ? 'mídia' : null, r.has_prior_complaints ? 'reincidente' : null]
         .filter(Boolean)
@@ -95,6 +102,8 @@ export class AnalyticsController {
       { header: 'Resposta', key: 'resposta', width: 60 },
       { header: 'Avaliação IA (1-3)', key: 'avaliacao', width: 16 },
       { header: 'Resultado', key: 'resultado', width: 14 },
+      { header: 'Tempo 1ª tela', key: 'tempo_tela1', width: 14 },
+      { header: 'Tempo 2ª tela', key: 'tempo_tela2', width: 14 },
       { header: 'Operador', key: 'operador', width: 24 },
       { header: 'Revisado em', key: 'revisado', width: 18 },
     ];
@@ -124,6 +133,8 @@ export class AnalyticsController {
         resposta: (r.response_text ?? '') as string,
         avaliacao: r.rating != null ? Number(r.rating) : '',
         resultado: decisionLabel(r.decision),
+        tempo_tela1: fmtDuration(r.first_screen_ms),
+        tempo_tela2: fmtDuration(r.second_screen_ms),
         operador: (r.reviewer_name ?? '') as string,
         revisado: fmtDate(r.reviewed_at),
       });
