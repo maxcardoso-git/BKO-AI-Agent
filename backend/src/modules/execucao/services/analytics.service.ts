@@ -42,11 +42,22 @@ export interface TicketAnalyticsRow {
   reviewerEmail: string | null;
 }
 
+/** Averages over the FULL filtered set (not just the current page). */
+export interface TicketAnalyticsSummary {
+  avgTmtMs: number | null;
+  avgFirstScreenMs: number | null;
+  avgSecondScreenMs: number | null;
+  tmtCount: number;
+  firstScreenCount: number;
+  secondScreenCount: number;
+}
+
 export interface TicketAnalyticsList {
   rows: TicketAnalyticsRow[];
   total: number;
   page: number;
   limit: number;
+  summary: TicketAnalyticsSummary;
 }
 
 @Injectable()
@@ -196,9 +207,29 @@ export class AnalyticsService {
       ${whereSql}
     `;
 
-    const [rawRows, countRows] = await Promise.all([
+    // Averages over the whole filtered set (every matching complaint), not just
+    // the page of rows. COUNT(col) ignores NULLs so the denominators reflect how
+    // many tickets actually have each timing.
+    const summarySql = `
+      ${baseCte}
+      SELECT
+        AVG(tmt.tmt_ms) AS avg_tmt_ms,
+        COUNT(tmt.tmt_ms)::int AS tmt_count,
+        AVG(tmt.first_screen_ms) AS avg_first_ms,
+        COUNT(tmt.first_screen_ms)::int AS first_count,
+        AVG(tmt.second_screen_ms) AS avg_second_ms,
+        COUNT(tmt.second_screen_ms)::int AS second_count
+      FROM complaint c
+      LEFT JOIN tipology t ON t.id = c."tipologyId"
+      LEFT JOIN latest_review lr ON lr."complaintId" = c.id
+      LEFT JOIN tmt_per_complaint tmt ON tmt."complaintId" = c.id
+      ${whereSql}
+    `;
+
+    const [rawRows, countRows, summaryRows] = await Promise.all([
       this.dataSource.query(rowsSql, [...params, limit, offset]),
       this.dataSource.query(countSql, params),
+      this.dataSource.query(summarySql, params),
     ]);
 
     const rows: TicketAnalyticsRow[] = (rawRows as Record<string, unknown>[]).map((r) => ({
@@ -241,7 +272,17 @@ export class AnalyticsService {
 
     const total = Number((countRows as Array<{ total: number }>)[0]?.total ?? 0);
 
-    return { rows, total, page, limit };
+    const s = (summaryRows as Record<string, unknown>[])[0] ?? {};
+    const summary: TicketAnalyticsSummary = {
+      avgTmtMs: s.avg_tmt_ms != null ? Number(s.avg_tmt_ms) : null,
+      avgFirstScreenMs: s.avg_first_ms != null ? Number(s.avg_first_ms) : null,
+      avgSecondScreenMs: s.avg_second_ms != null ? Number(s.avg_second_ms) : null,
+      tmtCount: Number(s.tmt_count ?? 0),
+      firstScreenCount: Number(s.first_count ?? 0),
+      secondScreenCount: Number(s.second_count ?? 0),
+    };
+
+    return { rows, total, page, limit, summary };
   }
 
   /**
@@ -372,6 +413,7 @@ export class AnalyticsService {
         SELECT
           te."complaintId" AS complaint_id,
           MIN(tte."occurredAt") FILTER (WHERE tte.milestone = 'execution_started') AS started_at,
+          MAX(tte."occurredAt") FILTER (WHERE tte.milestone = 'approved') AS approved_at,
           MIN(tte."occurredAt") FILTER (WHERE tte.milestone = 'paused_human') AS paused_at,
           MIN(tte."occurredAt") FILTER (WHERE tte.milestone = 'decision_made') AS decided_at
         FROM ticket_execution te
@@ -402,6 +444,7 @@ export class AnalyticsService {
         lr.status AS decision,
         lr."reviewedAt" AS reviewed_at,
         u.name AS reviewer_name,
+        EXTRACT(EPOCH FROM (em.approved_at - em.started_at)) * 1000 AS tmt_ms,
         CASE
           WHEN tl."lockedAt" IS NOT NULL AND em.started_at IS NOT NULL
             AND tl."lockedAt" <= em.started_at
