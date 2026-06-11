@@ -1,6 +1,6 @@
 # Handoff — BKO AI Agent
 
-Snapshot of the project as of **2026-06-08**. Read this once; refresh by
+Snapshot of the project as of **2026-06-11**. Read this once; refresh by
 running `git log` after.
 
 ## TL;DR
@@ -58,7 +58,8 @@ running `git log` after.
     Aprovar** — Corrigir always saves.
   - **Reprovar** opens RejectionModal with mandatory reason ≥10 chars.
 - Persona check (forbidden + required expressions, NFD-normalized substring)
-- Memory learning loop: corrections embedded and surfaced in future drafts
+- Memory learning loop: corrections AND rejections embedded and surfaced in
+  future drafts — **fixed for real on 2026-06-11**, see section below
 - Template Override (operator picks a different IQI for one complaint)
 - Rich-text rendering of "Resposta enviada ao cliente"
 
@@ -119,6 +120,46 @@ running `git log` after.
 - `/templates` resolves `tipologyId → name` (editor badge + list cards) via
   `useTipologies()`, and adds a **tipologia filter dropdown** combined with the
   search (AND). Options limited to tipologies that actually have templates.
+
+### Learning loop fixed end-to-end (2026-06-11)
+
+The correction-memory cycle had three gaps that made it mostly decorative.
+All fixed and deployed (backend commit `9f6f28d`, mirrored to `TiagoMacedoso/bko`):
+
+1. **Embedding mismatch (the big one):** `persistFeedback` embedded the AI
+   draft text, but `DraftFinalResponse` retrieval runs **before any draft
+   exists** and searches with the **complaint text** embedding — the two
+   sides lived in different vector spaces. Now persist embeds
+   `COALESCE(complaint.normalizedText, complaint.rawText)`, matching what
+   retrieval queries with.
+2. **Rejections were stored but never retrieved** (generation only fetched
+   `feedbackType='correction'`). Drafts now also receive similar rejections
+   in a "Rascunhos Reprovados Anteriormente" system-prompt section; the
+   `draft_response` artifact carries `injectedRejections` /
+   `injectedRejectionsCount` for the validation UI.
+3. **`correctionWeight` was dead** — `findSimilarFeedback` now ranks by
+   `cosine similarity × correctionWeight` (rejection = 0.5).
+
+**Backfill:** `npm run reembed:feedback`
+(`src/database/seeds/reembed-feedback-memory.ts`, idempotent) re-embeds
+existing `human_feedback_memory` rows with the complaint text. Already run
+on the reference VPS — **no-op: the table is empty** (prod has only 2
+`approved` reviews; approvals intentionally don't persist memory). The loop
+is armed for the first real correction/rejection. **Tiago's environment
+still needs to run it after deploying** (also no-op if their table is empty).
+
+To verify it works: correct a draft in /validar, process another ticket of
+the same tipology, and look for
+`[DraftFinalResponse] Injected 1 past corrections + 0 rejections` in the logs.
+
+### Analytics XLSX export (2026-06-11)
+
+`/admin/analytics/tickets/export` (commit `35f2597`): new
+**"Resposta IA (original)"** column (final/draft response without
+`humanFinalText`) next to "Resposta final", so corrected tickets show AI
+vs sent side by side; and `stripHtml()` in the controller converts the
+rich-text HTML (`<p>`, `<br>`, entities) into clean cell text with real
+line breaks.
 
 ### Message generation uses BOTH persona AND IQI template (verified 2026-06-08)
 - `buildDraftResponsePrompt` injects, in order: REGRAS ABSOLUTAS → persona tone
@@ -206,6 +247,21 @@ repo — and intermittently for `git fetch`. Workaround used throughout
 push from there with a PAT, reset the URL. **If you ever hit this, move
 the working copy out of iCloud Drive** (e.g. `~/Code/BKO-Console`).
 
+**Resolved aftermath (2026-06-11):** the failure is intermittent — direct
+pushes from the iCloud path worked for both repos this day; try direct
+first. The VPS-push workaround had left `BKO-Console` on GitHub with a
+**rewritten 12-commit history** ("Initial commit matching VPS production
+state") unrelated to the 56-commit local history. Trees were byte-identical,
+so they were reconciled with
+`git merge origin/main --allow-unrelated-histories` (merge `63abd8d`) —
+both lineages now coexist; never force-push over it. The production clone
+`/root/EngDB/BKOConsole` (pm2 cwd) had a dead git (HEAD from March, no
+remote, files deployed by copy); its HEAD was aligned to `63abd8d` without
+touching the working tree. Its `origin` cannot fetch (no credentials on
+the VPS) — to re-sync its git metadata, push from local:
+`git push ssh://root@72.61.52.70/root/EngDB/BKOConsole main:refs/heads/synced-from-local`
+then `git reset synced-from-local` there.
+
 ### Reference VPS path layout (read before deploying!)
 
 On `72.61.52.70` the canonical paths the running processes use are:
@@ -257,6 +313,11 @@ A deploy of a `src/*.ts` change is: `scp` the file → `npm run build` (optional
 ## Recent significant commits
 
 Backend (`maxcardoso-git/BKO-AI-Agent`):
+- `52945b5` — docs(handoff): TiagoMacedoso/bko mirror note + do-not-overwrite list
+- `12a4ecd` — chore(backend): sync package-lock with declared websockets deps
+- `35f2597` — feat(analytics): original AI response column in XLSX + strip HTML
+- `9f6f28d` — fix(memoria): align feedback embeddings with retrieval + use rejections in draft prompt
+- `d05ad05` — feat(analytics): TMT no XLSX + médias agregadas no relatório
 - `240e1a7` — chore(scripts): idempotent re-map SQL for Modalidade → tipology
 - `98273cc` — feat(turbina-import): alias verbose ANATEL Modalidade → internal tipology
 - `ff3c14d` — fix(turbina-import): dedup protocols in-batch + collision-tolerant insert
@@ -272,6 +333,10 @@ Backend (`maxcardoso-git/BKO-AI-Agent`):
 - `4d2592f` — refactor: resolve LLM API key from DB with .env fallback
 
 Frontend (`maxcardoso-git/BKO-Console`):
+- `63abd8d` — merge: reconcile local development history with VPS-pushed history
+- `f5470ac` — docs: add CLAUDE.md (committed from local; content already mirrored remotely)
+- `c75a295` — feat(processar/validar): smart-note actions, confirm dialogs, IA auto-fill (local commit of work already live)
+- `514aab2` — feat(personas): instructions brief + clone (local commit of work already live)
 - `0e7ad07` — feat(templates): show tipologia name instead of UUID + tipologia filter
 - `62245c4` — fix(processar): preserve ticket prefill through IA extract + hard-block on pendências
 - `80c3f52` — feat(processar): IA auto-fills mandatory fields + compliance gate on Processar
@@ -286,10 +351,12 @@ Frontend (`maxcardoso-git/BKO-Console`):
 > this product from a **monorepo** `TiagoMacedoso/bko` (`BKO-AI-Agent/backend` +
 > `BKO-Console` + `db-dumps/` + `docker-compose.yml`). When you ship a
 > backend/frontend fix that they need, push the same change into that
-> monorepo's subfolders too (HEAD `ea71840` = learning-loop fix `9f6f28d` +
-> analytics XLSX `35f2597` mirrored). They deploy from a separate DB, so
-> data scripts (re-map SQL, `npm run reembed:feedback`) must be run on
-> their side too.
+> monorepo's subfolders too (HEAD `5c9f4e3` = learning-loop fix `9f6f28d` +
+> analytics XLSX `35f2597` mirrored, plus the updated
+> `BKO-AI-Agent/UPGRADE.md` with the 2026-06-11 step-by-step for their
+> docker-compose setup). They deploy from a separate DB, so data scripts
+> (re-map SQL, `npm run reembed:feedback`) must be run on their side too —
+> **pending on their side as of 2026-06-11**.
 >
 > **NEVER blind-copy over the mirror** — it carries Tiago-side adaptations
 > that must survive every mirror: basePath `/bko` (middleware, api.ts,
