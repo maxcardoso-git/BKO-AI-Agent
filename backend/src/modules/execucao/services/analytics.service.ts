@@ -440,6 +440,7 @@ export class AnalyticsService {
         (ap.compliance ->> 'isCompliant')::boolean AS is_compliant,
         ap.compliance -> 'violations' AS violations,
         COALESCE(lr."humanFinalText", ap.final_response ->> 'finalResponse', ap.draft_response ->> 'draftResponse') AS response_text,
+        COALESCE(ap.final_response ->> 'finalResponse', ap.draft_response ->> 'draftResponse') AS ai_response_text,
         lr."aiResponseRating" AS rating,
         lr.status AS decision,
         lr."reviewedAt" AS reviewed_at,

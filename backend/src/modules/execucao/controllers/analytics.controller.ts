@@ -80,6 +80,22 @@ export class AnalyticsController {
       if (!Array.isArray(v) || v.length === 0) return '';
       return v.map((x: any) => x?.rule ?? x?.message ?? x?.fieldLabel ?? JSON.stringify(x)).join(' | ');
     };
+    // Responses are stored as rich-text HTML from the editor; XLSX cells need plain text.
+    const stripHtml = (v: unknown): string => {
+      if (!v) return '';
+      return String(v)
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>\s*<p[^>]*>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#0?39;/g, "'")
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    };
 
     const wb = new ExcelJS.Workbook();
     wb.creator = 'BKO Agent';
@@ -99,7 +115,8 @@ export class AnalyticsController {
       { header: 'Conformidade (%)', key: 'conf_pct', width: 16 },
       { header: 'Conforme?', key: 'conforme', width: 12 },
       { header: 'Violações', key: 'violacoes', width: 40 },
-      { header: 'Resposta', key: 'resposta', width: 60 },
+      { header: 'Resposta IA (original)', key: 'resposta_ia', width: 60 },
+      { header: 'Resposta final', key: 'resposta', width: 60 },
       { header: 'Avaliação IA (1-3)', key: 'avaliacao', width: 16 },
       { header: 'Resultado', key: 'resultado', width: 14 },
       { header: 'TMT', key: 'tmt', width: 14 },
@@ -131,7 +148,8 @@ export class AnalyticsController {
         conf_pct: r.compliance_score != null ? Math.round(Number(r.compliance_score) * 100) : '',
         conforme: r.is_compliant == null ? '' : r.is_compliant ? 'Sim' : 'Não',
         violacoes: violations(r.violations),
-        resposta: (r.response_text ?? '') as string,
+        resposta_ia: stripHtml(r.ai_response_text),
+        resposta: stripHtml(r.response_text),
         avaliacao: r.rating != null ? Number(r.rating) : '',
         resultado: decisionLabel(r.decision),
         tmt: fmtDuration(r.tmt_ms),
@@ -142,6 +160,7 @@ export class AnalyticsController {
       });
     }
     ws.getColumn('reclamacao').alignment = { wrapText: true, vertical: 'top' };
+    ws.getColumn('resposta_ia').alignment = { wrapText: true, vertical: 'top' };
     ws.getColumn('resposta').alignment = { wrapText: true, vertical: 'top' };
 
     const ab = await wb.xlsx.writeBuffer();
