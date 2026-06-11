@@ -282,13 +282,21 @@ Frontend (`maxcardoso-git/BKO-Console`):
 - `876c934` — docs: CLAUDE.md handoff
 - `b2098b9` — initial snapshot matching VPS production
 
-> **Mirror repo `TiagoMacedoso/bko` (2026-06-08):** a third party runs this
-> product from a **monorepo** `TiagoMacedoso/bko` (`BKO-AI-Agent/backend` +
-> `BKO-Console` + `db-dumps/` + `docker-compose.yml`). The Turbina dedup,
-> the Modalidade alias, the templates-screen change and the re-map SQL were
-> mirrored there (HEAD `eacf83a`). When you ship a backend/frontend fix that
-> they need, push the same change into that monorepo's subfolders too. They
-> deploy from a separate DB, so the re-map SQL must be run on their side.
+> **Mirror repo `TiagoMacedoso/bko` (updated 2026-06-11):** a third party runs
+> this product from a **monorepo** `TiagoMacedoso/bko` (`BKO-AI-Agent/backend` +
+> `BKO-Console` + `db-dumps/` + `docker-compose.yml`). When you ship a
+> backend/frontend fix that they need, push the same change into that
+> monorepo's subfolders too (HEAD `ea71840` = learning-loop fix `9f6f28d` +
+> analytics XLSX `35f2597` mirrored). They deploy from a separate DB, so
+> data scripts (re-map SQL, `npm run reembed:feedback`) must be run on
+> their side too.
+>
+> **NEVER blind-copy over the mirror** — it carries Tiago-side adaptations
+> that must survive every mirror: basePath `/bko` (middleware, api.ts,
+> app-layout, tokens page), case-insensitive role checks (roles.guard,
+> ticket-lock.service), extra CORS origin `pocs-telco.br.engineering`
+> (events.gateway), optional empty API keys (app.module). Diff each file
+> against your pre-change state before copying.
 
 > **Note 2026-06-03:** Commits between `8084438` and `a7840e5` were pushed
 > to GitHub during March–June but **never actually ran on the reference VPS**
