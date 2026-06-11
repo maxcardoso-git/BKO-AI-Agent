@@ -38,6 +38,7 @@ export interface PromptContext {
   // Memory-augmented context (MEM-01..MEM-06)
   similarCases?: Array<{ metadata: Record<string, unknown>; similarity: number }>;
   humanCorrections?: Array<{ aiText: string; humanText: string; diffDescription: string; similarity: number }>;
+  humanRejections?: Array<{ aiText: string; rejectionReason: string; similarity: number | null }>;
   stylePatterns?: Array<{ expression: string; type: 'approved' | 'forbidden' }>;
 }
 
@@ -224,6 +225,31 @@ export class PromptBuilderService {
         'USE essas correcoes como guia: evite os padroes que foram corrigidos e adote o estilo das versoes humanas.',
         '',
         ...correctionLines,
+      );
+    }
+
+    if (ctx.humanRejections && ctx.humanRejections.length > 0) {
+      const rejectionLines: string[] = [];
+      ctx.humanRejections.forEach((r, idx) => {
+        const sim = r.similarity != null ? ` (similaridade ${(r.similarity * 100).toFixed(0)}%)` : '';
+        rejectionLines.push(
+          `### Rascunho reprovado ${idx + 1}${sim}`,
+          `**Rascunho IA reprovado:**`,
+          r.aiText,
+          ``,
+          `**Motivo da reprovacao:**`,
+          r.rejectionReason,
+          `---`,
+        );
+      });
+      system.push(
+        '',
+        '## Rascunhos Reprovados Anteriormente (Aprendizado)',
+        '',
+        'Os rascunhos abaixo foram REPROVADOS por operadores em casos similares — nao puderam ser aproveitados.',
+        'NAO repita os padroes desses rascunhos; trate cada motivo de reprovacao como restricao obrigatoria.',
+        '',
+        ...rejectionLines,
       );
     }
 

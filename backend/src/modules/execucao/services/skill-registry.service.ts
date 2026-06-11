@@ -262,11 +262,16 @@ export class SkillRegistryService {
           const tipologyId = (input['tipologyId'] as string) ?? '';
           const complaintText = (input['normalizedText'] as string) ?? (input['complaintText'] as string) ?? '';
           let memoryAugmentedInput = input;
-          // Declare injectedCorrections outside try so it is accessible for artifact persistence
+          // Declare injected feedback outside try so it is accessible for artifact persistence
           let injectedCorrections: Array<{
             aiText: string;
             humanText: string;
             diffDescription: string;
+            similarity: number | null;
+          }> = [];
+          let injectedRejections: Array<{
+            aiText: string;
+            rejectionReason: string;
             similarity: number | null;
           }> = [];
           if (!tipologyId) {
@@ -276,27 +281,34 @@ export class SkillRegistryService {
               const injectionLimit = Number(process.env.MEMORY_INJECTION_LIMIT ?? '3');
               const embeddingModel = await this.modelSelector.getEmbeddingModel();
               const { embedding: memEmbedding } = await embed({ model: embeddingModel, value: complaintText });
-              const [similarCasesRaw, humanCorrectionsRaw, stylePatternsRaw] = await Promise.all([
+              const [similarCasesRaw, humanCorrectionsRaw, humanRejectionsRaw, stylePatternsRaw] = await Promise.all([
                 this.memoryRetrieval.findSimilarCases(memEmbedding, tipologyId, 3),
                 this.memoryRetrieval.findSimilarFeedback(memEmbedding, tipologyId, 'correction', injectionLimit),
+                this.memoryRetrieval.findSimilarFeedback(memEmbedding, tipologyId, 'rejection', injectionLimit),
                 this.memoryRetrieval.findStylePatterns(tipologyId, 5),
               ]);
               const stylePatterns = stylePatternsRaw.map(p => ({
                 expression: p.expressionText,
                 type: p.expressionType as 'approved' | 'forbidden',
               }));
-              // Sanitize corrections: truncate text fields for prompt token budget
+              // Sanitize feedback: truncate text fields for prompt token budget
               injectedCorrections = humanCorrectionsRaw.map(c => ({
                 aiText: c.aiText?.slice(0, 800) ?? '',
                 humanText: c.humanText?.slice(0, 800) ?? '',
                 diffDescription: c.diffDescription?.slice(0, 500) ?? '',
                 similarity: typeof c.similarity === 'number' ? Number(c.similarity.toFixed(3)) : null,
               }));
-              this.logger.log(`[DraftFinalResponse] Injected ${injectedCorrections.length} past corrections (tipologyId=${tipologyId})`);
+              injectedRejections = humanRejectionsRaw.map(r => ({
+                aiText: r.aiText?.slice(0, 800) ?? '',
+                rejectionReason: (r.rejectionReason ?? r.diffDescription)?.slice(0, 500) ?? '',
+                similarity: typeof r.similarity === 'number' ? Number(r.similarity.toFixed(3)) : null,
+              }));
+              this.logger.log(`[DraftFinalResponse] Injected ${injectedCorrections.length} past corrections + ${injectedRejections.length} rejections (tipologyId=${tipologyId})`);
               memoryAugmentedInput = {
                 ...input,
                 similarCases: similarCasesRaw,
                 humanCorrections: injectedCorrections,
+                humanRejections: injectedRejections,
                 stylePatterns,
               };
             } catch (memErr) {
@@ -327,6 +339,8 @@ export class SkillRegistryService {
                 kbChunksUsed: result.kbChunksUsed ?? 0,
                 injectedCorrections,                              // array of {aiText, humanText, diffDescription, similarity}
                 injectedCorrectionsCount: injectedCorrections.length, // convenience field for UI badge
+                injectedRejections,                               // array of {aiText, rejectionReason, similarity}
+                injectedRejectionsCount: injectedRejections.length,
               },
               version: 1,
               stepExecutionId,

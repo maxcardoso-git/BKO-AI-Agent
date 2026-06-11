@@ -18,11 +18,12 @@ export class MemoryFeedbackService {
   /**
    * Persists a human correction or rejection as a HumanFeedbackMemory row with pgvector embedding.
    *
-   * IMPORTANT — embedding target change (Phase 10):
-   * We now embed aiText (the AI-generated draft) instead of humanText.
-   * Rationale: future retrieval is "find past corrections of drafts SIMILAR TO this new AI draft",
-   * so the search vector must represent the AI draft. This intentionally differs from Phase 5
-   * behaviour which embedded humanText.
+   * IMPORTANT — embedding target: the COMPLAINT text (normalizedText ?? rawText), NOT the AI draft.
+   * Retrieval at DraftFinalResponse runs BEFORE any draft exists and searches with the new
+   * complaint's embedding, so the stored vector must live in the same "complaint text" space
+   * for cosine similarity to be meaningful. (Earlier phases embedded humanText, then aiText —
+   * both mismatched what retrieval actually queries with. Existing rows are migrated by
+   * src/database/seeds/reembed-feedback-memory.ts.)
    *
    * Non-critical: errors are logged but not re-thrown to avoid breaking the review flow.
    */
@@ -37,8 +38,14 @@ export class MemoryFeedbackService {
   }): Promise<void> {
     try {
       const embeddingModel = await this.modelSelector.getEmbeddingModel();
-      // Embed the AI text — we want to find drafts similar to ones that were corrected/rejected
-      const { embedding } = await embed({ model: embeddingModel, value: params.aiText });
+      const complaintRows = await this.dataSource.query(
+        `SELECT COALESCE(NULLIF("normalizedText", ''), "rawText") AS text FROM complaint WHERE id = $1`,
+        [params.complaintId],
+      );
+      // Defensive fallback only — every reviewed complaint has rawText
+      const embeddingTarget =
+        ((complaintRows as Array<{ text: string | null }>)[0]?.text ?? '').trim() || params.aiText;
+      const { embedding } = await embed({ model: embeddingModel, value: embeddingTarget });
 
       const correctionCategory =
         params.feedbackType === 'rejection' ? 'rejection' : 'response_edit';

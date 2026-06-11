@@ -85,6 +85,8 @@ export class MemoryRetrievalService {
    * Finds similar past feedback (corrections or rejections) by embedding + tipology + feedbackType.
    * Pass feedbackType=null to retrieve both types.
    * Returns rejection reasons alongside diff descriptions so the LLM can avoid past failures.
+   * Ranking is cosine similarity weighted by correctionWeight (rejections carry 0.5),
+   * so weaker signals only win mixed-type queries when substantially more similar.
    */
   async findSimilarFeedback(
     embedding: number[],
@@ -106,7 +108,7 @@ export class MemoryRetrievalService {
               1 - (embedding <=> $1::vector) AS similarity
        FROM "human_feedback_memory"
        WHERE "tipologyId" = $2${whereType}
-       ORDER BY embedding <=> $1::vector ASC
+       ORDER BY (1 - (embedding <=> $1::vector)) * COALESCE("correctionWeight", 1.0) DESC
        LIMIT $${params.length}`,
       params,
     );

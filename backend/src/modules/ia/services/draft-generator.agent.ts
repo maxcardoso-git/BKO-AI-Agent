@@ -108,6 +108,7 @@ export class DraftGeneratorAgent {
     // 4. Build prompt — include memory-augmented context if passed in
     const similarCases = input['similarCases'] as Array<{ metadata: Record<string, unknown>; similarity: number }> | undefined;
     const humanCorrections = input['humanCorrections'] as Array<{ aiText: string; humanText: string; diffDescription: string; similarity: number }> | undefined;
+    const humanRejections = input['humanRejections'] as Array<{ aiText: string; rejectionReason: string; similarity: number | null }> | undefined;
     const stylePatterns = input['stylePatterns'] as Array<{ expression: string; type: 'approved' | 'forbidden' }> | undefined;
 
     // Persona steering — tipology-specific persona wins, falls back to global.
@@ -138,6 +139,7 @@ export class DraftGeneratorAgent {
       previousStepOutputs,
       similarCases,
       humanCorrections,
+      humanRejections,
       stylePatterns,
       // PIPE-03: forward operator note from LoadComplaint skill output into prompt context
       operatorNote: (input['operatorNote'] as string | null) ?? null,
