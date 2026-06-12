@@ -10,6 +10,33 @@ export interface AnalyticsFilters {
   rating?: number;
   page?: number;
   limit?: number;
+  sortBy?: string;
+  sortDir?: string;
+}
+
+/** Sort key → output column alias. Shared by the list and export queries —
+ *  both SELECTs expose the same aliases. Whitelist; never interpolate input. */
+const SORT_COLUMNS: Record<string, string> = {
+  protocol: 'protocol_number',
+  tipology: 'tipology_label',
+  risk: 'risk_level',
+  propensity: 'propensity_score',
+  tone: 'emotional_tone',
+  compliance: 'compliance_score',
+  tmt: 'tmt_ms',
+  firstScreen: 'first_screen_ms',
+  secondScreen: 'second_screen_ms',
+  rating: 'rating',
+  decision: 'decision',
+  reviewedAt: 'reviewed_at',
+  reviewer: 'reviewer_name',
+  dataDocumento: 'data_documento',
+};
+
+function orderBySql(filters: AnalyticsFilters): string {
+  const col = SORT_COLUMNS[filters.sortBy ?? ''] ?? SORT_COLUMNS.reviewedAt;
+  const dir = filters.sortDir === 'asc' ? 'ASC' : 'DESC';
+  return `ORDER BY ${col} ${dir} NULLS LAST, c."createdAt" DESC`;
 }
 
 export interface TicketAnalyticsRow {
@@ -85,12 +112,16 @@ export class AnalyticsService {
       filters.rating ?? null,
     ];
 
-    // Date range filters on the ANATEL complaint date (dataDocumento), not the
-    // import time. `to` is end-of-day inclusive (< to + 1 day) to avoid the
-    // off-by-one that excluded the selected day.
+    // Date range filters on the treatment date (reviewedAt = "Tratado em"), not
+    // on the ANATEL complaint date — operators filter by when they worked the
+    // ticket. reviewedAt is a naive timestamp holding UTC, so convert to the
+    // São Paulo local date before comparing. Rows without a review are excluded
+    // whenever a date filter is set (they have no treatment date to match).
     const whereSql = `
-      WHERE ($1::date IS NULL OR c."dataDocumento" >= $1::date)
-        AND ($2::date IS NULL OR c."dataDocumento" < ($2::date + INTERVAL '1 day'))
+      WHERE ($1::date IS NULL
+        OR (lr."reviewedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo')::date >= $1::date)
+        AND ($2::date IS NULL
+        OR (lr."reviewedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo')::date <= $2::date)
         AND ($3::text IS NULL OR t.key = $3)
         AND ($4::text IS NULL OR lr.status = $4)
         AND ($5::int IS NULL OR lr."aiResponseRating" = $5)
@@ -194,7 +225,7 @@ export class AnalyticsService {
       LEFT JOIN "user" u ON u.id::text = lr."reviewerUserId"
       LEFT JOIN tmt_per_complaint tmt ON tmt."complaintId" = c.id
       ${whereSql}
-      ORDER BY c."dataDocumento" DESC NULLS LAST, c."createdAt" DESC
+      ${orderBySql(filters)}
       LIMIT $6 OFFSET $7
     `;
 
@@ -464,12 +495,14 @@ export class AnalyticsService {
       LEFT JOIN latest_review lr ON lr."complaintId" = c.id
       LEFT JOIN "user" u ON u.id::text = lr."reviewerUserId"
       LEFT JOIN exec_milestones em ON em.complaint_id = c.id
-      WHERE ($1::date IS NULL OR c."dataDocumento" >= $1::date)
-        AND ($2::date IS NULL OR c."dataDocumento" < ($2::date + INTERVAL '1 day'))
+      WHERE ($1::date IS NULL
+        OR (lr."reviewedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo')::date >= $1::date)
+        AND ($2::date IS NULL
+        OR (lr."reviewedAt" AT TIME ZONE 'UTC' AT TIME ZONE 'America/Sao_Paulo')::date <= $2::date)
         AND ($3::text IS NULL OR t.key = $3)
         AND ($4::text IS NULL OR lr.status = $4)
         AND ($5::int IS NULL OR lr."aiResponseRating" = $5)
-      ORDER BY c."dataDocumento" DESC NULLS LAST, c."createdAt" DESC
+      ${orderBySql(filters)}
       LIMIT 50000
     `;
     return this.dataSource.query(sql, params);

@@ -22,6 +22,8 @@ export class AnalyticsController {
     @Query('rating') rating?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: string,
   ) {
     return this.analytics.listTickets({
       from,
@@ -31,6 +33,8 @@ export class AnalyticsController {
       rating: rating ? Number(rating) : undefined,
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
+      sortBy,
+      sortDir,
     });
   }
 
@@ -47,6 +51,8 @@ export class AnalyticsController {
     @Query('tipologyKey') tipologyKey?: string,
     @Query('decision') decision?: 'approved' | 'corrected' | 'rejected',
     @Query('rating') rating?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortDir') sortDir?: string,
   ): Promise<void> {
     const rows = await this.analytics.exportRows({
       from,
@@ -54,6 +60,8 @@ export class AnalyticsController {
       tipologyKey,
       decision,
       rating: rating ? Number(rating) : undefined,
+      sortBy,
+      sortDir,
     });
 
     const decisionLabel = (d: unknown): string =>
