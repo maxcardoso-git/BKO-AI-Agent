@@ -5,6 +5,7 @@ import { TicketTimingEvent } from '../entities/ticket-timing-event.entity';
 
 export type TimingMilestone =
   | 'ticket_created'
+  | 'ticket_opened'
   | 'note_saved'
   | 'execution_started'
   | 'paused_human'

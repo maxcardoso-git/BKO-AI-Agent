@@ -137,16 +137,17 @@ export class AnalyticsService {
         SELECT
           em.complaint_id AS "complaintId",
           EXTRACT(EPOCH FROM (em.approved_at - em.started_at)) * 1000 AS tmt_ms,
-          -- First screen: lock acquisition → execution_started. ticket_lock keeps a
-          -- single row per complaint (DELETE+INSERT on acquire), so lockedAt is the
-          -- latest grab; only count it when it precedes the start to avoid negatives
-          -- from a re-acquire during /validar.
-          CASE
-            WHEN tl."lockedAt" IS NOT NULL AND em.started_at IS NOT NULL
-              AND tl."lockedAt" <= em.started_at
-            THEN EXTRACT(EPOCH FROM (em.started_at - tl."lockedAt")) * 1000
-            ELSE NULL
-          END AS first_screen_ms,
+          -- First screen: ticket opened → execution_started. Uses the durable
+          -- ticket_opened timing event (emitted on lock acquire) instead of
+          -- ticket_lock.lockedAt — the lock row is deleted when the operator
+          -- decides, which wiped first-screen time for every treated ticket.
+          -- Latest open before the start handles re-opens/reloads.
+          EXTRACT(EPOCH FROM (em.started_at - (
+            SELECT MAX(o."occurredAt") FROM ticket_timing_event o
+            WHERE o."complaintId" = em.complaint_id
+              AND o.milestone = 'ticket_opened'
+              AND o."occurredAt" <= em.started_at
+          ))) * 1000 AS first_screen_ms,
           -- Second screen: AI response shown (paused_human) → operator decision.
           CASE
             WHEN em.paused_at IS NOT NULL AND em.decided_at IS NOT NULL
@@ -155,7 +156,6 @@ export class AnalyticsService {
             ELSE NULL
           END AS second_screen_ms
         FROM exec_milestones em
-        LEFT JOIN ticket_lock tl ON tl."complaintId" = em.complaint_id
       )
     `;
 
@@ -446,12 +446,12 @@ export class AnalyticsService {
         lr."reviewedAt" AS reviewed_at,
         u.name AS reviewer_name,
         EXTRACT(EPOCH FROM (em.approved_at - em.started_at)) * 1000 AS tmt_ms,
-        CASE
-          WHEN tl."lockedAt" IS NOT NULL AND em.started_at IS NOT NULL
-            AND tl."lockedAt" <= em.started_at
-          THEN EXTRACT(EPOCH FROM (em.started_at - tl."lockedAt")) * 1000
-          ELSE NULL
-        END AS first_screen_ms,
+        EXTRACT(EPOCH FROM (em.started_at - (
+          SELECT MAX(o."occurredAt") FROM ticket_timing_event o
+          WHERE o."complaintId" = em.complaint_id
+            AND o.milestone = 'ticket_opened'
+            AND o."occurredAt" <= em.started_at
+        ))) * 1000 AS first_screen_ms,
         CASE
           WHEN em.paused_at IS NOT NULL AND em.decided_at IS NOT NULL
             AND em.decided_at > em.paused_at
@@ -464,7 +464,6 @@ export class AnalyticsService {
       LEFT JOIN latest_review lr ON lr."complaintId" = c.id
       LEFT JOIN "user" u ON u.id::text = lr."reviewerUserId"
       LEFT JOIN exec_milestones em ON em.complaint_id = c.id
-      LEFT JOIN ticket_lock tl ON tl."complaintId" = c.id
       WHERE ($1::date IS NULL OR c."dataDocumento" >= $1::date)
         AND ($2::date IS NULL OR c."dataDocumento" < ($2::date + INTERVAL '1 day'))
         AND ($3::text IS NULL OR t.key = $3)

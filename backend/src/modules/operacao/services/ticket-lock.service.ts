@@ -9,6 +9,7 @@ import { DataSource, MoreThan, Repository } from 'typeorm';
 import { TicketLock } from '../entities/ticket-lock.entity';
 import { Complaint, ComplaintStatus } from '../entities/complaint.entity';
 import { UserRole } from '../entities/user.entity';
+import { TimingEventService } from './timing-event.service';
 
 const LOCK_TTL_MINUTES = 15;
 
@@ -18,6 +19,7 @@ export class TicketLockService {
     @InjectRepository(TicketLock)
     private readonly lockRepo: Repository<TicketLock>,
     private readonly dataSource: DataSource,
+    private readonly timingEventService: TimingEventService,
   ) {}
 
   /**
@@ -26,7 +28,7 @@ export class TicketLockService {
    * Returns 409 if an active (non-expired) lock exists for another user.
    */
   async acquire(complaintId: string, userId: string): Promise<TicketLock> {
-    return this.dataSource.transaction(async (manager) => {
+    const lock = await this.dataSource.transaction(async (manager) => {
       // Check for existing active lock
       const existing = await manager.findOne(TicketLock, {
         where: { complaintId },
@@ -53,6 +55,10 @@ export class TicketLockService {
       });
       return manager.save(lock);
     });
+    // Durable first-screen marker — the lock row itself is deleted when the
+    // operator decides, so analytics derives first-screen time from this event.
+    await this.timingEventService.emit('ticket_opened', complaintId, null, userId, lock.lockedAt);
+    return lock;
   }
 
   /** Get current lock state for a complaint. */
@@ -94,7 +100,7 @@ export class TicketLockService {
     userId: string,
     opts?: { createdAfter?: string | null; createdBefore?: string | null },
   ): Promise<{ complaint: Complaint; lock: TicketLock }> {
-    return this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
       const excluded = [ComplaintStatus.COMPLETED, ComplaintStatus.CANCELLED];
       const placeholders = excluded.map((_, i) => `$${i + 1}`).join(', ');
 
@@ -144,6 +150,14 @@ export class TicketLockService {
 
       return { complaint: complaint!, lock: savedLock };
     });
+    await this.timingEventService.emit(
+      'ticket_opened',
+      result.complaint.id,
+      null,
+      userId,
+      result.lock.lockedAt,
+    );
+    return result;
   }
 
   /** Force-release a lock (requires SUPERVISOR or ADMIN role). */
