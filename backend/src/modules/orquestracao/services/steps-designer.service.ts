@@ -237,6 +237,9 @@ export class StepsDesignerService {
   /**
    * Sets a capability version as the current (deployed) version.
    * Unsets isCurrent on all sibling versions of the same capability.
+   * Also forces isActive=true: the runtime selector requires isCurrent AND
+   * isActive, so a version made current must be runnable — otherwise tickets
+   * for that tipology fail with "No current active version" at /processar.
    */
   async activateVersion(verId: string): Promise<{ success: boolean }> {
     const ver = await this.capVersionRepo.findOne({ where: { id: verId } });
@@ -246,7 +249,7 @@ export class StepsDesignerService {
       { capabilityId: ver.capabilityId },
       { isCurrent: false },
     );
-    await this.capVersionRepo.update({ id: verId }, { isCurrent: true });
+    await this.capVersionRepo.update({ id: verId }, { isCurrent: true, isActive: true });
     return { success: true };
   }
 
