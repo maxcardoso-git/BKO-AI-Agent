@@ -165,28 +165,38 @@ export class AnalyticsService {
         GROUP BY te.id, te."complaintId"
       ),
       tmt_per_complaint AS (
+        -- TMT is operator-only handling time: 1st screen + 2nd screen. The AI
+        -- pipeline (started→paused) and finalization (decided→approved) are
+        -- intentionally excluded — the focus is the human's time. NULL when
+        -- either screen is unmeasurable (no honest sum possible).
         SELECT
-          em.complaint_id AS "complaintId",
-          EXTRACT(EPOCH FROM (em.approved_at - em.started_at)) * 1000 AS tmt_ms,
-          -- First screen: ticket opened → execution_started. Uses the durable
-          -- ticket_opened timing event (emitted on lock acquire) instead of
-          -- ticket_lock.lockedAt — the lock row is deleted when the operator
-          -- decides, which wiped first-screen time for every treated ticket.
-          -- Latest open before the start handles re-opens/reloads.
-          EXTRACT(EPOCH FROM (em.started_at - (
-            SELECT MAX(o."occurredAt") FROM ticket_timing_event o
-            WHERE o."complaintId" = em.complaint_id
-              AND o.milestone = 'ticket_opened'
-              AND o."occurredAt" <= em.started_at
-          ))) * 1000 AS first_screen_ms,
-          -- Second screen: AI response shown (paused_human) → operator decision.
-          CASE
-            WHEN em.paused_at IS NOT NULL AND em.decided_at IS NOT NULL
-              AND em.decided_at > em.paused_at
-            THEN EXTRACT(EPOCH FROM (em.decided_at - em.paused_at)) * 1000
-            ELSE NULL
-          END AS second_screen_ms
-        FROM exec_milestones em
+          "complaintId",
+          first_screen_ms,
+          second_screen_ms,
+          (first_screen_ms + second_screen_ms) AS tmt_ms
+        FROM (
+          SELECT
+            em.complaint_id AS "complaintId",
+            -- First screen: ticket opened → execution_started. Uses the durable
+            -- ticket_opened timing event (emitted on lock acquire) instead of
+            -- ticket_lock.lockedAt — the lock row is deleted when the operator
+            -- decides, which wiped first-screen time for every treated ticket.
+            -- Latest open before the start handles re-opens/reloads.
+            EXTRACT(EPOCH FROM (em.started_at - (
+              SELECT MAX(o."occurredAt") FROM ticket_timing_event o
+              WHERE o."complaintId" = em.complaint_id
+                AND o.milestone = 'ticket_opened'
+                AND o."occurredAt" <= em.started_at
+            ))) * 1000 AS first_screen_ms,
+            -- Second screen: AI response shown (paused_human) → operator decision.
+            CASE
+              WHEN em.paused_at IS NOT NULL AND em.decided_at IS NOT NULL
+                AND em.decided_at > em.paused_at
+              THEN EXTRACT(EPOCH FROM (em.decided_at - em.paused_at)) * 1000
+              ELSE NULL
+            END AS second_screen_ms
+          FROM exec_milestones em
+        ) s
       )
     `;
 
@@ -353,19 +363,41 @@ export class AnalyticsService {
         LIMIT 1
       ),
       tmt_per_complaint AS (
+        -- TMT = 1st screen + 2nd screen (operator-only time), NULL if either
+        -- screen is unmeasurable. Mirrors the list query, scoped to the latest
+        -- execution of this complaint.
         SELECT
-          te."complaintId",
-          EXTRACT(EPOCH FROM (
-            (SELECT MAX(tte1."occurredAt") FROM ticket_timing_event tte1
-              WHERE tte1."executionId" = te.id AND tte1.milestone = 'approved')
-            -
-            (SELECT MIN(tte2."occurredAt") FROM ticket_timing_event tte2
-              WHERE tte2."executionId" = te.id AND tte2.milestone = 'execution_started')
-          )) * 1000 AS tmt_ms
-        FROM ticket_execution te
-        WHERE te."complaintId" = $1
-        ORDER BY te."createdAt" DESC
-        LIMIT 1
+          "complaintId",
+          (first_screen_ms + second_screen_ms) AS tmt_ms
+        FROM (
+          SELECT
+            m."complaintId",
+            EXTRACT(EPOCH FROM (m.started_at - (
+              SELECT MAX(o."occurredAt") FROM ticket_timing_event o
+              WHERE o."complaintId" = m."complaintId"
+                AND o.milestone = 'ticket_opened'
+                AND o."occurredAt" <= m.started_at
+            ))) * 1000 AS first_screen_ms,
+            CASE
+              WHEN m.paused_at IS NOT NULL AND m.decided_at IS NOT NULL
+                AND m.decided_at > m.paused_at
+              THEN EXTRACT(EPOCH FROM (m.decided_at - m.paused_at)) * 1000
+              ELSE NULL
+            END AS second_screen_ms
+          FROM (
+            SELECT
+              te."complaintId",
+              MIN(tte."occurredAt") FILTER (WHERE tte.milestone = 'execution_started') AS started_at,
+              MIN(tte."occurredAt") FILTER (WHERE tte.milestone = 'paused_human') AS paused_at,
+              MIN(tte."occurredAt") FILTER (WHERE tte.milestone = 'decision_made') AS decided_at
+            FROM ticket_execution te
+            LEFT JOIN ticket_timing_event tte ON tte."executionId" = te.id
+            WHERE te."complaintId" = $1
+            GROUP BY te.id, te."complaintId", te."createdAt"
+            ORDER BY te."createdAt" DESC
+            LIMIT 1
+          ) m
+        ) s
       )
       SELECT
         c.id AS complaint_id,
@@ -476,7 +508,22 @@ export class AnalyticsService {
         lr.status AS decision,
         lr."reviewedAt" AS reviewed_at,
         u.name AS reviewer_name,
-        EXTRACT(EPOCH FROM (em.approved_at - em.started_at)) * 1000 AS tmt_ms,
+        (
+          -- TMT = 1st screen + 2nd screen (operator-only time); NULL if either missing
+          EXTRACT(EPOCH FROM (em.started_at - (
+            SELECT MAX(o2."occurredAt") FROM ticket_timing_event o2
+            WHERE o2."complaintId" = em.complaint_id
+              AND o2.milestone = 'ticket_opened'
+              AND o2."occurredAt" <= em.started_at
+          ))) * 1000
+          +
+          CASE
+            WHEN em.paused_at IS NOT NULL AND em.decided_at IS NOT NULL
+              AND em.decided_at > em.paused_at
+            THEN EXTRACT(EPOCH FROM (em.decided_at - em.paused_at)) * 1000
+            ELSE NULL
+          END
+        ) AS tmt_ms,
         EXTRACT(EPOCH FROM (em.started_at - (
           SELECT MAX(o."occurredAt") FROM ticket_timing_event o
           WHERE o."complaintId" = em.complaint_id

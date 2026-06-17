@@ -222,11 +222,24 @@ export class ObservabilityService {
               INNER JOIN step_execution se2 ON se2.id = hr2."stepExecutionId"
               WHERE se2."ticketExecutionId" = te.id AND hr2.status = 'approved'
               ORDER BY hr2."reviewedAt" DESC LIMIT 1)
-          ) AS operator_user_id
+          ) AS operator_user_id,
+          (
+            SELECT MIN(tte4."occurredAt") FROM ticket_timing_event tte4
+            WHERE tte4."executionId" = te.id AND tte4.milestone = 'paused_human'
+          ) AS paused_at,
+          (
+            SELECT MIN(tte5."occurredAt") FROM ticket_timing_event tte5
+            WHERE tte5."executionId" = te.id AND tte5.milestone = 'decision_made'
+          ) AS decided_at
         FROM ticket_execution te
         INNER JOIN complaint c ON c.id = te."complaintId"
       ),
       tmt AS (
+        -- TMT = 1st screen (ticket_opened→execution_started) + 2nd screen
+        -- (paused_human→decision_made). Operator-only handling time: the AI
+        -- pipeline and finalization are intentionally excluded. Rows without a
+        -- measurable sum (NULL on either screen) are dropped so COUNT(*)/AVG
+        -- stay consistent across the dashboard.
         SELECT
           execution_id,
           complaint_id,
@@ -234,14 +247,36 @@ export class ObservabilityService {
           risk_level,
           operator_user_id,
           started_at,
-          approved_at,
-          EXTRACT(EPOCH FROM (approved_at - started_at)) * 1000 AS tmt_ms
-        FROM tmt_base
-        WHERE started_at IS NOT NULL
-          AND approved_at IS NOT NULL
-          AND approved_at >= started_at
-          AND started_at >= $1
-          AND started_at < $2
+          first_screen_ms,
+          second_screen_ms,
+          (first_screen_ms + second_screen_ms) AS tmt_ms
+        FROM (
+          SELECT
+            tb.execution_id,
+            tb.complaint_id,
+            tb.tipology_id,
+            tb.risk_level,
+            tb.operator_user_id,
+            tb.started_at,
+            EXTRACT(EPOCH FROM (tb.started_at - (
+              SELECT MAX(o."occurredAt") FROM ticket_timing_event o
+              WHERE o."complaintId" = tb.complaint_id
+                AND o.milestone = 'ticket_opened'
+                AND o."occurredAt" <= tb.started_at
+            ))) * 1000 AS first_screen_ms,
+            CASE
+              WHEN tb.paused_at IS NOT NULL AND tb.decided_at IS NOT NULL
+                AND tb.decided_at > tb.paused_at
+              THEN EXTRACT(EPOCH FROM (tb.decided_at - tb.paused_at)) * 1000
+              ELSE NULL
+            END AS second_screen_ms
+          FROM tmt_base tb
+          WHERE tb.started_at IS NOT NULL
+            AND tb.started_at >= $1
+            AND tb.started_at < $2
+        ) s
+        WHERE first_screen_ms IS NOT NULL
+          AND second_screen_ms IS NOT NULL
       )
     `;
     return { sql, params: [from, to] };
