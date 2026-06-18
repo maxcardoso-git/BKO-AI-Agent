@@ -18,6 +18,7 @@ import { ComplaintParsingAgent } from '../../ia/services/complaint-parsing.agent
 import { DraftGeneratorAgent } from '../../ia/services/draft-generator.agent';
 import { ComplianceEvaluatorAgent } from '../../ia/services/compliance-evaluator.agent';
 import { FinalResponseComposerAgent } from '../../ia/services/final-response-composer.agent';
+import { TemplateSelectorAgent } from '../../ia/services/template-selector.agent';
 import { TokenUsageTrackerService } from '../../ia/services/token-usage-tracker.service';
 import { ModelSelectorService } from '../../ia/services/model-selector.service';
 import { VectorSearchService } from '../../base-de-conhecimento/services/vector-search.service';
@@ -90,6 +91,7 @@ export class SkillRegistryService {
     private readonly draftGenerator: DraftGeneratorAgent,
     private readonly complianceEvaluator: ComplianceEvaluatorAgent,
     private readonly finalResponseComposer: FinalResponseComposerAgent,
+    private readonly templateSelector: TemplateSelectorAgent,
     private readonly tokenUsageTracker: TokenUsageTrackerService,
     private readonly modelSelector: ModelSelectorService,
 
@@ -774,7 +776,53 @@ Situacao atual: ${situationKey ?? 'nao informada'}`;
       return { templateContent: null, templateName: null, error: 'No tipologyId provided' };
     }
     const complaintText = (input['normalizedText'] as string) ?? (input['complaintText'] as string) ?? '';
-    const template = await this.templateResolver.resolve(tipologyId, situationId, complaintId);
+
+    let template = await this.templateResolver.resolveOverride(complaintId);
+    let reasoning: string | null = null;
+    let confidence: number | null = null;
+
+    if (!template) {
+      // IQI templates are differentiated only by name/content (no structured key
+      // disambiguates them), so when a tipology has many, pick by meaning via LLM.
+      const candidates = await this.templateRepo.find({
+        where: { tipologyId, isActive: true },
+        order: { version: 'DESC' },
+      });
+
+      if (candidates.length > 1) {
+        const selection = await this.templateSelector.select(
+          complaintText,
+          candidates.map((c) => ({ id: c.id, name: c.name, content: c.templateContent })),
+        );
+        const picked = selection ? candidates.find((c) => c.id === selection.templateId) : null;
+        if (selection && picked) {
+          template = {
+            id: picked.id,
+            name: picked.name,
+            templateContent: picked.templateContent,
+            version: picked.version,
+            matchType: 'llm_selected',
+          };
+          reasoning = selection.reasoning;
+          confidence = selection.confidence;
+          if (selection.usage && selection.model && selection.provider) {
+            await this.tokenUsageTracker.track({
+              stepExecutionId,
+              model: selection.model,
+              provider: selection.provider,
+              inputTokens: selection.usage.inputTokens,
+              outputTokens: selection.usage.outputTokens,
+              latencyMs: selection.latencyMs ?? 0,
+            });
+          }
+        }
+      }
+
+      // Fallback for 0/1 candidate, or when LLM selection failed/was invalid.
+      if (!template) {
+        template = await this.templateResolver.resolve(tipologyId, situationId, complaintId);
+      }
+    }
 
     const artifact = await this.artifactRepo.save(
       this.artifactRepo.create({
@@ -784,6 +832,8 @@ Situacao atual: ${situationKey ?? 'nao informada'}`;
           templateName: template?.name ?? null,
           templateContent: template?.templateContent ?? null,
           matchType: template?.matchType ?? null,
+          reasoning,
+          confidence,
         },
         version: 1,
         stepExecutionId,
@@ -796,6 +846,8 @@ Situacao atual: ${situationKey ?? 'nao informada'}`;
       templateName: template?.name ?? null,
       templateId: template?.id ?? null,
       matchType: template?.matchType ?? null,
+      reasoning,
+      confidence,
       artifactId: artifact.id,
     };
   }

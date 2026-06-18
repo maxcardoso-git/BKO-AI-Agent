@@ -21,6 +21,7 @@ import { Persona } from '../regulatorio/entities/persona.entity';
 import { TemplateFieldsExtractorService } from './services/template-fields-extractor.service';
 import { TemplateFieldsAdminController } from './controllers/template-fields-admin.controller';
 import { MandatoryFieldExtractorAgent } from './services/mandatory-field-extractor.agent';
+import { TemplateSelectorAgent } from './services/template-selector.agent';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { MandatoryFieldExtractorAgent } from './services/mandatory-field-extract
     SmartNoteService,
     TemplateFieldsExtractorService,
     MandatoryFieldExtractorAgent,
+    TemplateSelectorAgent,
   ],
   exports: [
     ModelSelectorService,
@@ -52,6 +54,7 @@ import { MandatoryFieldExtractorAgent } from './services/mandatory-field-extract
     SmartNoteService,
     TemplateFieldsExtractorService,
     MandatoryFieldExtractorAgent,
+    TemplateSelectorAgent,
   ],
 })
 export class IaModule {}

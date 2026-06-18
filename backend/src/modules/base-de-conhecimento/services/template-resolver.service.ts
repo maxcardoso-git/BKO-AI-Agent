@@ -9,7 +9,7 @@ export interface ResolvedTemplate {
   name: string;
   templateContent: string;
   version: number;
-  matchType: 'tipology_situation' | 'tipology_only' | 'default' | 'operator_override';
+  matchType: 'tipology_situation' | 'tipology_only' | 'default' | 'operator_override' | 'llm_selected';
 }
 
 @Injectable()
@@ -29,32 +29,40 @@ export class TemplateResolverService {
    *          3) null tipology (default).
    * Returns null if no template found.
    */
+  /**
+   * Returns the operator-forced template for a complaint, if any. Exposed so
+   * the IQI skill can honor the override before running LLM-based selection.
+   */
+  async resolveOverride(
+    complaintId?: string | null,
+  ): Promise<ResolvedTemplate | null> {
+    if (!complaintId) return null;
+    const complaint = await this.complaintRepo.findOne({
+      where: { id: complaintId },
+      select: ['id', 'templateOverrideId'],
+    });
+    if (!complaint?.templateOverrideId) return null;
+    const forced = await this.templateRepo.findOne({
+      where: { id: complaint.templateOverrideId },
+    });
+    if (!forced) return null;
+    return {
+      id: forced.id,
+      name: forced.name,
+      templateContent: forced.templateContent,
+      version: forced.version,
+      matchType: 'operator_override',
+    };
+  }
+
   async resolve(
     tipologyId: string,
     situationId?: string | null,
     complaintId?: string | null,
   ): Promise<ResolvedTemplate | null> {
     // 0. Operator override wins regardless of tipology/situation
-    if (complaintId) {
-      const complaint = await this.complaintRepo.findOne({
-        where: { id: complaintId },
-        select: ['id', 'templateOverrideId'],
-      });
-      if (complaint?.templateOverrideId) {
-        const forced = await this.templateRepo.findOne({
-          where: { id: complaint.templateOverrideId },
-        });
-        if (forced) {
-          return {
-            id: forced.id,
-            name: forced.name,
-            templateContent: forced.templateContent,
-            version: forced.version,
-            matchType: 'operator_override',
-          };
-        }
-      }
-    }
+    const override = await this.resolveOverride(complaintId);
+    if (override) return override;
 
     // 1. Try exact match: tipology + situation
     if (situationId) {
