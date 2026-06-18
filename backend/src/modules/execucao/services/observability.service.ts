@@ -291,18 +291,31 @@ export class ObservabilityService {
       p95Ms: number;
       minMs: number;
       maxMs: number;
+      avgFirstMs: number;
+      avgSecondMs: number;
     };
-    byTipology: Array<{ tipologyKey: string | null; tipologyLabel: string | null; avgMs: number; count: number }>;
-    byOperator: Array<{ userId: string | null; name: string | null; email: string | null; avgMs: number; count: number }>;
+    byTipology: Array<{ tipologyKey: string | null; tipologyLabel: string | null; avgMs: number; avgFirstMs: number; avgSecondMs: number; count: number }>;
+    byOperator: Array<{ userId: string | null; name: string | null; email: string | null; avgMs: number; avgFirstMs: number; avgSecondMs: number; count: number }>;
     byRisk: Array<{ risk: string | null; avgMs: number; count: number }>;
-    series: Array<{ date: string; avgMs: number; count: number }>;
+    series: Array<{ date: string; avgMs: number; firstAvgMs: number; secondAvgMs: number; count: number }>;
+    points: Array<{
+      startedAt: string;
+      tmtMs: number;
+      firstMs: number;
+      secondMs: number;
+      risk: string | null;
+      tipologyKey: string | null;
+      tipologyLabel: string | null;
+      operatorUserId: string | null;
+      operatorName: string | null;
+    }>;
   }> {
     const to = toISO ? new Date(toISO) : new Date();
     const from = fromISO ? new Date(fromISO) : new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
 
     const { sql: cte, params } = this.buildTmtCte(from, to);
 
-    const [summaryRows, byTipologyRows, byOperatorRows, byRiskRows, seriesRows] = await Promise.all([
+    const [summaryRows, byTipologyRows, byOperatorRows, byRiskRows, seriesRows, pointsRows] = await Promise.all([
       this.dataSource.query(
         `${cte}
          SELECT
@@ -311,7 +324,9 @@ export class ObservabilityService {
            COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY tmt_ms), 0)::float AS median_ms,
            COALESCE(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY tmt_ms), 0)::float AS p95_ms,
            COALESCE(MIN(tmt_ms), 0)::float AS min_ms,
-           COALESCE(MAX(tmt_ms), 0)::float AS max_ms
+           COALESCE(MAX(tmt_ms), 0)::float AS max_ms,
+           COALESCE(AVG(first_screen_ms), 0)::float AS avg_first_ms,
+           COALESCE(AVG(second_screen_ms), 0)::float AS avg_second_ms
          FROM tmt`,
         params,
       ),
@@ -321,6 +336,8 @@ export class ObservabilityService {
            t.key AS tipology_key,
            t.label AS tipology_label,
            COALESCE(AVG(tmt.tmt_ms), 0)::float AS avg_ms,
+           COALESCE(AVG(tmt.first_screen_ms), 0)::float AS avg_first_ms,
+           COALESCE(AVG(tmt.second_screen_ms), 0)::float AS avg_second_ms,
            COUNT(*)::int AS count
          FROM tmt
          LEFT JOIN tipology t ON t.id = tmt.tipology_id
@@ -335,6 +352,8 @@ export class ObservabilityService {
            u.name AS name,
            u.email AS email,
            COALESCE(AVG(tmt.tmt_ms), 0)::float AS avg_ms,
+           COALESCE(AVG(tmt.first_screen_ms), 0)::float AS avg_first_ms,
+           COALESCE(AVG(tmt.second_screen_ms), 0)::float AS avg_second_ms,
            COUNT(*)::int AS count
          FROM tmt
          LEFT JOIN "user" u ON u.id::text = tmt.operator_user_id
@@ -358,15 +377,38 @@ export class ObservabilityService {
          SELECT
            to_char(date_trunc('day', tmt.started_at), 'YYYY-MM-DD') AS date,
            COALESCE(AVG(tmt.tmt_ms), 0)::float AS avg_ms,
+           COALESCE(AVG(tmt.first_screen_ms), 0)::float AS avg_first_ms,
+           COALESCE(AVG(tmt.second_screen_ms), 0)::float AS avg_second_ms,
            COUNT(*)::int AS count
          FROM tmt
          GROUP BY date_trunc('day', tmt.started_at)
          ORDER BY date_trunc('day', tmt.started_at) ASC`,
         params,
       ),
+      // Per-ticket points for the scatter charts (by tipology / by operator).
+      // Capped at 5000 to keep the payload and chart render sane.
+      this.dataSource.query(
+        `${cte}
+         SELECT
+           tmt.started_at AS started_at,
+           tmt.tmt_ms AS tmt_ms,
+           tmt.first_screen_ms AS first_ms,
+           tmt.second_screen_ms AS second_ms,
+           tmt.risk_level AS risk,
+           t.key AS tipology_key,
+           t.label AS tipology_label,
+           tmt.operator_user_id AS operator_user_id,
+           u.name AS operator_name
+         FROM tmt
+         LEFT JOIN tipology t ON t.id = tmt.tipology_id
+         LEFT JOIN "user" u ON u.id::text = tmt.operator_user_id
+         ORDER BY tmt.started_at ASC
+         LIMIT 5000`,
+        params,
+      ),
     ]);
 
-    const summary = summaryRows[0] ?? { count: 0, avg_ms: 0, median_ms: 0, p95_ms: 0, min_ms: 0, max_ms: 0 };
+    const summary = summaryRows[0] ?? { count: 0, avg_ms: 0, median_ms: 0, p95_ms: 0, min_ms: 0, max_ms: 0, avg_first_ms: 0, avg_second_ms: 0 };
 
     return {
       range: { from: from.toISOString(), to: to.toISOString() },
@@ -377,18 +419,24 @@ export class ObservabilityService {
         p95Ms: Number(summary.p95_ms) || 0,
         minMs: Number(summary.min_ms) || 0,
         maxMs: Number(summary.max_ms) || 0,
+        avgFirstMs: Number(summary.avg_first_ms) || 0,
+        avgSecondMs: Number(summary.avg_second_ms) || 0,
       },
-      byTipology: byTipologyRows.map((r: { tipology_key: string | null; tipology_label: string | null; avg_ms: number; count: number }) => ({
+      byTipology: byTipologyRows.map((r: { tipology_key: string | null; tipology_label: string | null; avg_ms: number; avg_first_ms: number; avg_second_ms: number; count: number }) => ({
         tipologyKey: r.tipology_key,
         tipologyLabel: r.tipology_label,
         avgMs: Number(r.avg_ms) || 0,
+        avgFirstMs: Number(r.avg_first_ms) || 0,
+        avgSecondMs: Number(r.avg_second_ms) || 0,
         count: Number(r.count) || 0,
       })),
-      byOperator: byOperatorRows.map((r: { user_id: string | null; name: string | null; email: string | null; avg_ms: number; count: number }) => ({
+      byOperator: byOperatorRows.map((r: { user_id: string | null; name: string | null; email: string | null; avg_ms: number; avg_first_ms: number; avg_second_ms: number; count: number }) => ({
         userId: r.user_id,
         name: r.name,
         email: r.email,
         avgMs: Number(r.avg_ms) || 0,
+        avgFirstMs: Number(r.avg_first_ms) || 0,
+        avgSecondMs: Number(r.avg_second_ms) || 0,
         count: Number(r.count) || 0,
       })),
       byRisk: byRiskRows.map((r: { risk: string | null; avg_ms: number; count: number }) => ({
@@ -396,10 +444,23 @@ export class ObservabilityService {
         avgMs: Number(r.avg_ms) || 0,
         count: Number(r.count) || 0,
       })),
-      series: seriesRows.map((r: { date: string; avg_ms: number; count: number }) => ({
+      series: seriesRows.map((r: { date: string; avg_ms: number; avg_first_ms: number; avg_second_ms: number; count: number }) => ({
         date: r.date,
         avgMs: Number(r.avg_ms) || 0,
+        firstAvgMs: Number(r.avg_first_ms) || 0,
+        secondAvgMs: Number(r.avg_second_ms) || 0,
         count: Number(r.count) || 0,
+      })),
+      points: pointsRows.map((r: { started_at: string | Date; tmt_ms: number; first_ms: number; second_ms: number; risk: string | null; tipology_key: string | null; tipology_label: string | null; operator_user_id: string | null; operator_name: string | null }) => ({
+        startedAt: r.started_at instanceof Date ? r.started_at.toISOString() : String(r.started_at),
+        tmtMs: Number(r.tmt_ms) || 0,
+        firstMs: Number(r.first_ms) || 0,
+        secondMs: Number(r.second_ms) || 0,
+        risk: r.risk,
+        tipologyKey: r.tipology_key,
+        tipologyLabel: r.tipology_label,
+        operatorUserId: r.operator_user_id,
+        operatorName: r.operator_name,
       })),
     };
   }
