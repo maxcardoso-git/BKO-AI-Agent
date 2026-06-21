@@ -27,4 +27,8 @@ export class TimingMetricsDto {
 
   /** Raw events grouped by milestone, for debugging / Phase 10 audit page. */
   events: Array<{ milestone: string; occurredAt: string; userId: string | null }>;
+
+  /** Server clock at response time. Lets the client anchor the live 2nd-screen
+   *  chronometer to the durable paused_human event without client-clock skew. */
+  serverNow: string;
 }

@@ -239,6 +239,7 @@ export class ComplaintService {
         occurredAt: e.occurredAt.toISOString(),
         userId: e.userId,
       })),
+      serverNow: new Date().toISOString(),
     };
   }
 
