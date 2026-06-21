@@ -240,6 +240,10 @@ export class ObservabilityService {
         -- pipeline and finalization are intentionally excluded. Rows without a
         -- measurable sum (NULL on either screen) are dropped so COUNT(*)/AVG
         -- stay consistent across the dashboard.
+        -- Scope: APPROVED executions only (approved_at present). A rejected
+        -- review also emits decision_made, but cancels its execution; counting
+        -- it would mislabel the "Tickets aprovados" card and double-count a
+        -- ticket that was rejected then reprocessed-and-approved.
         SELECT
           execution_id,
           complaint_id,
@@ -272,6 +276,7 @@ export class ObservabilityService {
             END AS second_screen_ms
           FROM tmt_base tb
           WHERE tb.started_at IS NOT NULL
+            AND tb.approved_at IS NOT NULL
             AND tb.started_at >= $1
             AND tb.started_at < $2
         ) s
