@@ -65,8 +65,18 @@ export class ObservabilityController {
   getTmt(
     @Query('from') from?: string,
     @Query('to') to?: string,
+    @Query('tipology') tipology?: string,
+    @Query('decision') decision?: string,
+    @Query('rating') rating?: string,
   ) {
-    return this.observabilityService.getTmt(from, to);
+    return this.observabilityService.getTmt(from, to, {
+      // decision absent → undefined → service defaults to 'approved'.
+      // decision='all' (or empty) → null → "Todas".
+      decision:
+        decision === undefined ? undefined : decision === 'all' || decision === '' ? null : decision,
+      rating: rating ? Number(rating) : null,
+      tipologyKey: tipology && tipology !== 'all' ? tipology : null,
+    });
   }
 
   // ─── Trace Explorer ───────────────────────────────────────────────────────

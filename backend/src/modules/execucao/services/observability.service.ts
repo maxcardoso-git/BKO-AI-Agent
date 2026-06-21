@@ -194,8 +194,15 @@ export class ObservabilityService {
   // End:   ticket_timing_event milestone='approved' OR human_review.reviewedAt with status='approved'
   //        (fallback covers historical executions before milestone 'approved' was emitted)
 
-  private buildTmtCte(from: Date, to: Date): { sql: string; params: unknown[] } {
-    // CTE that resolves start/end per execution and joins complaint metadata + operator
+  private buildTmtCte(
+    from: Date,
+    to: Date,
+    filters: { decision: string | null; rating: number | null; tipologyKey: string | null },
+  ): { sql: string; params: unknown[] } {
+    // CTE that resolves start/end per execution and joins complaint metadata +
+    // the execution's latest human review (decision/rating/operator). The
+    // review drives the gate so the dashboard can be filtered by decision,
+    // exactly like /admin/analises (default 'approved').
     const sql = `
       WITH tmt_base AS (
         SELECT
@@ -203,26 +210,24 @@ export class ObservabilityService {
           te."complaintId" AS complaint_id,
           c."tipologyId" AS tipology_id,
           c."riskLevel" AS risk_level,
+          (SELECT key FROM tipology WHERE id = c."tipologyId") AS tipology_key,
           (
             SELECT MIN(tte."occurredAt") FROM ticket_timing_event tte
             WHERE tte."executionId" = te.id AND tte.milestone = 'execution_started'
           ) AS started_at,
-          COALESCE(
-            (SELECT MAX(tte2."occurredAt") FROM ticket_timing_event tte2
-              WHERE tte2."executionId" = te.id AND tte2.milestone = 'approved'),
-            (SELECT MAX(hr."reviewedAt") FROM human_review hr
-              INNER JOIN step_execution se ON se.id = hr."stepExecutionId"
-              WHERE se."ticketExecutionId" = te.id AND hr.status = 'approved')
-          ) AS approved_at,
-          COALESCE(
-            (SELECT tte3."userId"::text FROM ticket_timing_event tte3
-              WHERE tte3."executionId" = te.id AND tte3.milestone = 'approved'
-              ORDER BY tte3."occurredAt" DESC LIMIT 1),
-            (SELECT hr2."reviewerUserId" FROM human_review hr2
-              INNER JOIN step_execution se2 ON se2.id = hr2."stepExecutionId"
-              WHERE se2."ticketExecutionId" = te.id AND hr2.status = 'approved'
-              ORDER BY hr2."reviewedAt" DESC LIMIT 1)
-          ) AS operator_user_id,
+          -- Latest human review of this execution drives decision / rating / operator.
+          (SELECT hr.status FROM human_review hr
+             INNER JOIN step_execution se ON se.id = hr."stepExecutionId"
+             WHERE se."ticketExecutionId" = te.id AND hr."reviewedAt" IS NOT NULL
+             ORDER BY hr."reviewedAt" DESC LIMIT 1) AS decision,
+          (SELECT hr."aiResponseRating" FROM human_review hr
+             INNER JOIN step_execution se ON se.id = hr."stepExecutionId"
+             WHERE se."ticketExecutionId" = te.id AND hr."reviewedAt" IS NOT NULL
+             ORDER BY hr."reviewedAt" DESC LIMIT 1) AS rating,
+          (SELECT hr."reviewerUserId" FROM human_review hr
+             INNER JOIN step_execution se ON se.id = hr."stepExecutionId"
+             WHERE se."ticketExecutionId" = te.id AND hr."reviewedAt" IS NOT NULL
+             ORDER BY hr."reviewedAt" DESC LIMIT 1) AS operator_user_id,
           (
             SELECT MIN(tte4."occurredAt") FROM ticket_timing_event tte4
             WHERE tte4."executionId" = te.id AND tte4.milestone = 'paused_human'
@@ -240,10 +245,10 @@ export class ObservabilityService {
         -- pipeline and finalization are intentionally excluded. Rows without a
         -- measurable sum (NULL on either screen) are dropped so COUNT(*)/AVG
         -- stay consistent across the dashboard.
-        -- Scope: APPROVED executions only (approved_at present). A rejected
-        -- review also emits decision_made, but cancels its execution; counting
-        -- it would mislabel the "Tickets aprovados" card and double-count a
-        -- ticket that was rejected then reprocessed-and-approved.
+        -- Gate: execution must be DECIDED, and matches the decision/rating/
+        -- tipology filters. $3 (decision) defaults to 'approved' from the
+        -- service — so by default only approved executions count (no double
+        -- count of rejected-then-reprocessed tickets).
         SELECT
           execution_id,
           complaint_id,
@@ -276,7 +281,10 @@ export class ObservabilityService {
             END AS second_screen_ms
           FROM tmt_base tb
           WHERE tb.started_at IS NOT NULL
-            AND tb.approved_at IS NOT NULL
+            AND tb.decision IS NOT NULL
+            AND ($3::text IS NULL OR tb.decision = $3)
+            AND ($4::int IS NULL OR tb.rating = $4)
+            AND ($5::text IS NULL OR tb.tipology_key = $5)
             AND tb.started_at >= $1
             AND tb.started_at < $2
         ) s
@@ -284,10 +292,14 @@ export class ObservabilityService {
           AND second_screen_ms IS NOT NULL
       )
     `;
-    return { sql, params: [from, to] };
+    return { sql, params: [from, to, filters.decision, filters.rating, filters.tipologyKey] };
   }
 
-  async getTmt(fromISO?: string, toISO?: string): Promise<{
+  async getTmt(
+    fromISO?: string,
+    toISO?: string,
+    filters?: { decision?: string | null; rating?: number | null; tipologyKey?: string | null },
+  ): Promise<{
     range: { from: string; to: string };
     summary: {
       count: number;
@@ -301,6 +313,7 @@ export class ObservabilityService {
     };
     byTipology: Array<{ tipologyKey: string | null; tipologyLabel: string | null; avgMs: number; avgFirstMs: number; avgSecondMs: number; count: number }>;
     byOperator: Array<{ userId: string | null; name: string | null; email: string | null; avgMs: number; avgFirstMs: number; avgSecondMs: number; count: number }>;
+    byTipologyOperator: Array<{ tipologyKey: string | null; tipologyLabel: string | null; userId: string | null; name: string | null; count: number }>;
     byRisk: Array<{ risk: string | null; avgMs: number; count: number }>;
     series: Array<{ date: string; avgMs: number; firstAvgMs: number; secondAvgMs: number; count: number }>;
     points: Array<{
@@ -318,9 +331,16 @@ export class ObservabilityService {
     const to = toISO ? new Date(toISO) : new Date();
     const from = fromISO ? new Date(fromISO) : new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    const { sql: cte, params } = this.buildTmtCte(from, to);
+    // Decision defaults to 'approved' (matches /admin/analises and keeps the
+    // approved-only scope) unless explicitly set to null = "Todas".
+    const decision = filters?.decision === undefined ? 'approved' : filters.decision;
+    const { sql: cte, params } = this.buildTmtCte(from, to, {
+      decision: decision ?? null,
+      rating: filters?.rating ?? null,
+      tipologyKey: filters?.tipologyKey ?? null,
+    });
 
-    const [summaryRows, byTipologyRows, byOperatorRows, byRiskRows, seriesRows, pointsRows] = await Promise.all([
+    const [summaryRows, byTipologyRows, byOperatorRows, byRiskRows, seriesRows, pointsRows, byTipoOpRows] = await Promise.all([
       this.dataSource.query(
         `${cte}
          SELECT
@@ -411,6 +431,22 @@ export class ObservabilityService {
          LIMIT 5000`,
         params,
       ),
+      // Ticket counts per tipology × operator — feeds the stacked-bar chart.
+      this.dataSource.query(
+        `${cte}
+         SELECT
+           t.key AS tipology_key,
+           t.label AS tipology_label,
+           tmt.operator_user_id AS user_id,
+           u.name AS name,
+           COUNT(*)::int AS count
+         FROM tmt
+         LEFT JOIN tipology t ON t.id = tmt.tipology_id
+         LEFT JOIN "user" u ON u.id::text = tmt.operator_user_id
+         GROUP BY t.key, t.label, tmt.operator_user_id, u.name
+         ORDER BY count DESC`,
+        params,
+      ),
     ]);
 
     const summary = summaryRows[0] ?? { count: 0, avg_ms: 0, median_ms: 0, p95_ms: 0, min_ms: 0, max_ms: 0, avg_first_ms: 0, avg_second_ms: 0 };
@@ -442,6 +478,13 @@ export class ObservabilityService {
         avgMs: Number(r.avg_ms) || 0,
         avgFirstMs: Number(r.avg_first_ms) || 0,
         avgSecondMs: Number(r.avg_second_ms) || 0,
+        count: Number(r.count) || 0,
+      })),
+      byTipologyOperator: byTipoOpRows.map((r: { tipology_key: string | null; tipology_label: string | null; user_id: string | null; name: string | null; count: number }) => ({
+        tipologyKey: r.tipology_key,
+        tipologyLabel: r.tipology_label,
+        userId: r.user_id,
+        name: r.name,
         count: Number(r.count) || 0,
       })),
       byRisk: byRiskRows.map((r: { risk: string | null; avg_ms: number; count: number }) => ({
