@@ -21,7 +21,7 @@ export interface ExtractedField {
 }
 
 /**
- * Reads the consumer complaint text and produces best-effort suggested values
+ * Reads the consumer complaint text AND the operator note, and produces best-effort suggested values
  * for the mandatory ANATEL response fields (Descricao do Fato, Providencia
  * Adotada, Data de Resolucao, etc.). The operator reviews and edits before
  * the main IA pipeline runs.
@@ -39,6 +39,16 @@ export class MandatoryFieldExtractorAgent {
   async extract(
     complaintText: string,
     rules: MandatoryFieldRule[],
+    /**
+     * A NOTA DO OPERADOR — a palavra da PRESTADORA sobre o caso.
+     *
+     * Faltava aqui, e era o buraco central: a extração lia só a reclamação do consumidor. Tudo
+     * o que prova que a prestadora agiu — tentativas de contato com data, hora e telefone,
+     * e-mail de posicionamento enviado, protocolo de atendimento, plano, valores creditados —
+     * está na NOTA, não na reclamação. Sem ela, os campos obrigatórios voltavam vazios e a
+     * resposta saía sem os fatos que a Anatel avalia.
+     */
+    operatorNote?: string | null,
   ): Promise<ExtractedField[]> {
     if (!rules.length) return [];
 
@@ -71,6 +81,22 @@ export class MandatoryFieldExtractorAgent {
       '- Para "Data de Resolucao": use formato DD/MM/AAAA. Se o texto nao trouxer uma data explicita de resolucao, hasSignal=false.',
       '- Para campos como CPF, Numero do Protocolo, Nome do Reclamante: extraia exatamente como aparecem.',
       '',
+      'DUAS FONTES, PESOS DIFERENTES:',
+      '- A RECLAMACAO e a versao do consumidor: use para o que ele alega, pediu e relatou.',
+      '- A NOTA DO OPERADOR e a apuracao da PRESTADORA: ela manda no que a empresa fez, constatou',
+      '  e vai fazer. Havendo divergencia sobre uma acao da empresa, vale a nota.',
+      '- Um campo pode ser preenchido a partir de QUALQUER uma das duas. Nao devolva vazio um',
+      '  campo cuja resposta esta na nota so porque ela nao esta na reclamacao.',
+      '',
+      'O QUE A NOTA COSTUMA TRAZER E NAO PODE SE PERDER (copie como esta escrito):',
+      '- tentativas de contato: QUANTAS, em que DATA e HORARIO, para qual TELEFONE, e se houve ou',
+      '  nao sucesso (tentativa sem exito tambem e acao da prestadora e precisa ser registrada);',
+      '- envio de posicionamento: por qual CANAL (e-mail, carta, SMS, WhatsApp), para qual',
+      '  ENDERECO/numero e em que DATA;',
+      '- protocolos de atendimento e de ouvidoria, com a data de registro;',
+      '- o que foi constatado no sistema (plano contratado, consumo, status da linha);',
+      '- valores creditados, estornados ou disponibilizados, e a data.',
+      '',
       'Retorne apenas o objeto JSON, sem comentarios.',
     ].join('\n');
 
@@ -83,6 +109,9 @@ export class MandatoryFieldExtractorAgent {
       '',
       '## Reclamacao do consumidor:',
       complaintText.trim() || '(texto vazio)',
+      '',
+      '## Nota do operador (apuracao da prestadora):',
+      (operatorNote ?? '').trim() || '(sem nota registrada)',
     ].join('\n');
 
     try {
