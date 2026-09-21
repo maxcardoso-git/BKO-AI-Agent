@@ -28,6 +28,7 @@ import { MandatoryFieldExtractorAgent, ExtractedField } from '../../ia/services/
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { MandatoryInfoRule } from '../../regulatorio/entities/mandatory-info-rule.entity';
+import { ComplaintUserNote } from '../entities/complaint-user-note.entity';
 
 @Controller('complaints')
 @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
@@ -41,6 +42,8 @@ export class ComplaintController {
     private readonly mandatoryRuleRepo: Repository<MandatoryInfoRule>,
     @InjectRepository(Complaint)
     private readonly complaintRepo: Repository<Complaint>,
+    @InjectRepository(ComplaintUserNote)
+    private readonly noteRepo: Repository<ComplaintUserNote>,
   ) {}
 
   /** GET /api/complaints/:id/template-fields — operator-input fields
@@ -122,6 +125,19 @@ export class ComplaintController {
       where: { tipologyId: IsNull(), isActive: true },
       order: { sortOrder: 'ASC' },
     });
+    /**
+     * A NOTA DO OPERADOR entra na extração junto com a reclamação.
+     *
+     * A extração lia só `rawText` — a versão do consumidor. Os campos que a Anatel avalia
+     * (tentativas de contato com data e telefone, e-mail de posicionamento enviado, protocolo,
+     * providência adotada) só existem na NOTA, e voltavam vazios por não serem sequer lidos.
+     */
+    const nota = await this.noteRepo.findOne({
+      where: { complaintId: id, isActive: true },
+      order: { version: 'DESC' },
+      select: ['id', 'content'],
+    });
+
     const fields = await this.mandatoryExtractor.extract(
       complaint.rawText ?? '',
       rules.map((r) => ({
@@ -129,6 +145,7 @@ export class ComplaintController {
         fieldLabel: r.fieldLabel,
         fieldDescription: r.description ?? null,
       })),
+      nota?.content ?? null,
     );
     return { fields };
   }
